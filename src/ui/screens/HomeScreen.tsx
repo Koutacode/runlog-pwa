@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import BigButton from '../components/BigButton';
 import OdoDialog from '../components/OdoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -64,7 +64,6 @@ function getNextDayIndex(events: AppEvent[]): number {
 }
 
 export default function HomeScreen() {
-  const navigate = useNavigate();
   const [tripId, setTripId] = useState<string | null>(null);
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -133,7 +132,6 @@ export default function HomeScreen() {
               setTripId(newTripId);
               const ev = await getEventsByTripId(newTripId);
               setEvents(ev);
-              navigate(`/trip/${newTripId}`);
             } catch (e: any) {
               alert(e?.message ?? '運行開始に失敗しました');
             } finally {
