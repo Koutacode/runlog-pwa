@@ -17,6 +17,7 @@ export default function InstallButton() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEventLike | null>(null);
   const [installed, setInstalled] = useState<boolean>(isStandalone());
   const [installing, setInstalling] = useState(false);
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     function onBIP(e: Event) {
@@ -29,6 +30,7 @@ export default function InstallButton() {
     }
     window.addEventListener('beforeinstallprompt', onBIP);
     window.addEventListener('appinstalled', onInstalled);
+    setChecked(true);
     return () => {
       window.removeEventListener('beforeinstallprompt', onBIP);
       window.removeEventListener('appinstalled', onInstalled);
@@ -37,10 +39,22 @@ export default function InstallButton() {
 
   if (installed) return null;
 
+  const canPrompt = !!promptEvent;
+  const label = canPrompt
+    ? installing
+      ? 'インストール中…'
+      : 'PWAをインストール'
+    : 'インストール方法を表示';
+
   return (
     <button
       onClick={async () => {
-        if (!promptEvent) return;
+        if (!promptEvent) {
+          alert(
+            'インストールが表示されない場合は、ブラウザのメニューから「アプリをインストール」を選択してください（Chrome/Edgeはアドレスバーのインストールボタン、Safariは共有メニュー→ホーム画面に追加）。\n準備ができたら自動でインストールボタンが有効になります。',
+          );
+          return;
+        }
         try {
           setInstalling(true);
           await promptEvent.prompt();
@@ -63,7 +77,7 @@ export default function InstallButton() {
         opacity: installing ? 0.7 : 1,
       }}
     >
-      {!promptEvent ? 'インストール（準備中）' : installing ? 'インストール中…' : 'PWAをインストール'}
+      {!checked ? '準備中…' : label}
     </button>
   );
 }

@@ -81,6 +81,8 @@ export default function HomeScreen() {
   const [confirmDayCloseOpen, setConfirmDayCloseOpen] = useState(false);
   const [fuelOpen, setFuelOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [geoStatus, setGeoStatus] = useState<{ lat: number; lng: number; accuracy?: number; at: string } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   const openRestSessionId = useMemo(() => getOpenRestSessionId(events), [events]);
   const openLoadSessionId = useMemo(() => getOpenToggle(events, 'load_start', 'load_end', 'loadSessionId'), [events]);
@@ -112,6 +114,29 @@ export default function HomeScreen() {
 
   useEffect(() => {
     refresh();
+  }, []);
+
+  async function captureGeoOnce() {
+    try {
+      setGeoError(null);
+      const geo = await getGeo();
+      if (geo) {
+        setGeoStatus({
+          lat: geo.lat,
+          lng: geo.lng,
+          accuracy: geo.accuracy,
+          at: new Date().toISOString(),
+        });
+      } else {
+        setGeoError('位置情報が取得できませんでした（ブラウザ設定を確認してください）');
+      }
+    } catch (e: any) {
+      setGeoError(e?.message ?? '位置情報の取得に失敗しました');
+    }
+  }
+
+  useEffect(() => {
+    captureGeoOnce();
   }, []);
 
   useEffect(() => {
@@ -223,6 +248,35 @@ export default function HomeScreen() {
             <div style={{ opacity: 0.8 }}>他の進行中イベントはありません</div>
           )}
         </div>
+      </div>
+      <div style={{ background: '#0b0b0b', color: '#fff', padding: 12, borderRadius: 14, marginBottom: 12 }}>
+        <div style={{ fontWeight: 900, marginBottom: 6 }}>位置情報</div>
+        {geoStatus ? (
+          <div style={{ display: 'grid', gap: 4, fontSize: 14 }}>
+            <div>緯度: {geoStatus.lat.toFixed(5)}</div>
+            <div>経度: {geoStatus.lng.toFixed(5)}</div>
+            {geoStatus.accuracy != null && <div>精度: ±{Math.round(geoStatus.accuracy)}m</div>}
+            <div style={{ opacity: 0.8 }}>取得時刻: {new Date(geoStatus.at).toLocaleString('ja-JP')}</div>
+          </div>
+        ) : (
+          <div style={{ opacity: 0.8, marginBottom: 4 }}>まだ取得できていません</div>
+        )}
+        {geoError && <div style={{ color: '#fca5a5', marginTop: 6 }}>{geoError}</div>}
+        <button
+          onClick={captureGeoOnce}
+          style={{
+            marginTop: 8,
+            width: '100%',
+            height: 40,
+            borderRadius: 10,
+            border: '1px solid #374151',
+            background: '#1f2937',
+            color: '#fff',
+            fontWeight: 800,
+          }}
+        >
+          位置情報を再取得
+        </button>
       </div>
       <div style={{ display: 'grid', gap: 10 }}>
         {/* End trip */}
