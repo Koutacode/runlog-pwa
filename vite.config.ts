@@ -6,7 +6,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 // automatically replaced with the version from package.json via define.
 const pkg = require('./package.json');
 
+const repoName = 'runlog-pwa';
+const basePath = `/${repoName}/`;
+
 export default defineConfig({
+  base: basePath,
   plugins: [
     react(),
     VitePWA({
@@ -15,7 +19,8 @@ export default defineConfig({
       manifest: {
         name: 'RunLog',
         short_name: 'RunLog',
-        start_url: '/',
+        start_url: basePath,
+        scope: basePath,
         display: 'standalone',
         background_color: '#0b0b0b',
         theme_color: '#0b0b0b',
@@ -42,7 +47,7 @@ export default defineConfig({
         clientsClaim: true,
         skipWaiting: true,
         cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
+        navigateFallback: `${basePath}index.html`,
       },
     }),
   ],
