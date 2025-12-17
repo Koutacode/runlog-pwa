@@ -1,0 +1,128 @@
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { getEventsByTripId } from '../../db/repositories';
+import { buildTripViewModel, TripViewModel } from '../../state/selectors';
+
+function fmtLocal(ts?: string) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d);
+}
+
+export default function TripDetail() {
+  const { tripId } = useParams();
+  const [vm, setVm] = useState<TripViewModel | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  async function load() {
+    if (!tripId) return;
+    setErr(null);
+    try {
+      const events = await getEventsByTripId(tripId);
+      const model = buildTripViewModel(tripId, events);
+      setVm(model);
+    } catch (e: any) {
+      setErr(e?.message ?? '読み込みに失敗しました');
+    }
+  }
+  useEffect(() => {
+    load();
+  }, [tripId]);
+  if (!tripId) {
+    return <div style={{ padding: 16 }}>tripId が不正です</div>;
+  }
+  return (
+    <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>運行詳細</div>
+          <div style={{ opacity: 0.8, fontSize: 12 }}>tripId: {tripId}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Link to="/" style={{ color: '#93c5fd' }}>ホーム</Link>
+          <Link to="/history" style={{ color: '#93c5fd' }}>履歴</Link>
+          <button onClick={load} style={{ padding: '8px 10px', borderRadius: 12 }}>再読込</button>
+        </div>
+      </div>
+      {err && (
+        <div style={{ background: '#7f1d1d', color: '#fff', padding: 12, borderRadius: 12 }}>{err}</div>
+      )}
+      {!vm && !err && <div>読み込み中…</div>}
+      {vm && (
+        <>
+          <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
+            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+              <div style={{ fontWeight: 900, marginBottom: 6 }}>距離サマリー</div>
+              <div style={{ opacity: 0.9 }}>
+                開始ODO: {vm.odoStart} km / 終了ODO: {vm.odoEnd ?? '-'} km
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <div>総距離: {vm.totalKm ?? '-'} km</div>
+                <div>最終区間: {vm.lastLegKm ?? '-'} km</div>
+              </div>
+            </div>
+            {!vm.validation.ok && (
+              <div style={{ background: '#7c2d12', color: '#fff', padding: 12, borderRadius: 16 }}>
+                <div style={{ fontWeight: 900, marginBottom: 6 }}>整合性チェック</div>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {vm.validation.errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+              <div style={{ fontWeight: 900, marginBottom: 8 }}>区間距離一覧（分割休息も含む）</div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {vm.segments.map(seg => (
+                  <div key={seg.index} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '8px 10px', borderRadius: 12, background: '#0b0b0b' }}>
+                    <div style={{ opacity: 0.95 }}>
+                      <div style={{ fontWeight: 800 }}>{seg.fromLabel} → {seg.toLabel}</div>
+                      <div style={{ opacity: 0.8, fontSize: 12 }}>{fmtLocal(seg.fromTs)} → {fmtLocal(seg.toTs)}</div>
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: seg.valid ? '#fff' : '#fecaca' }}>{seg.km} km</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+              <div style={{ fontWeight: 900, marginBottom: 8 }}>日別運行（休息終了で「はい」を押した分だけ確定）</div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {vm.dayRuns.map(day => (
+                  <div key={day.dayIndex} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '8px 10px', borderRadius: 12, background: '#0b0b0b' }}>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>{day.dayIndex}日目 {day.status === 'pending' ? '（締め待ち）' : ''}</div>
+                      <div style={{ opacity: 0.8, fontSize: 12 }}>{day.fromLabel} → {day.toLabel}</div>
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 900 }}>{day.km} km</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+              <div style={{ fontWeight: 900, marginBottom: 8 }}>イベント一覧</div>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {vm.timeline.map((t, idx) => (
+                  <div key={idx} style={{ padding: '8px 10px', borderRadius: 12, background: '#0b0b0b' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                      <div style={{ fontWeight: 900 }}>{t.title}</div>
+                      <div style={{ opacity: 0.8, fontSize: 12 }}>{fmtLocal(t.ts)}</div>
+                    </div>
+                    {t.detail && <div style={{ opacity: 0.85, fontSize: 12, marginTop: 4 }}>{t.detail}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,370 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import BigButton from '../components/BigButton';
+import OdoDialog from '../components/OdoDialog';
+import ConfirmDialog from '../components/ConfirmDialog';
+import FuelDialog from '../components/FuelDialog';
+import { getGeo } from '../../services/geo';
+import {
+  getActiveTripId,
+  getEventsByTripId,
+  startTrip,
+  endTrip,
+  startRest,
+  endRest,
+  startLoad,
+  endLoad,
+  startBreak,
+  endBreak,
+  addRefuel,
+  addBoarding,
+  addExpressway,
+} from '../../db/repositories';
+import type { AppEvent } from '../../domain/types';
+
+// Helpers to find open sessions
+function getOpenRestSessionId(events: AppEvent[]): string | null {
+  const restStarts = events.filter(e => e.type === 'rest_start').sort((a, b) => a.ts.localeCompare(b.ts));
+  if (restStarts.length === 0) return null;
+  const restEnds = events.filter(e => e.type === 'rest_end');
+  for (let i = restStarts.length - 1; i >= 0; i--) {
+    const rs: any = restStarts[i];
+    const id = rs.extras?.restSessionId as string | undefined;
+    if (!id) continue;
+    const hasEnd = restEnds.some(re => (re as any).extras?.restSessionId === id);
+    if (!hasEnd) return id;
+  }
+  return null;
+}
+
+function getOpenToggle(events: AppEvent[], startType: string, endType: string, key: string): string | null {
+  const starts = events.filter(e => e.type === startType).sort((a, b) => a.ts.localeCompare(b.ts));
+  const ends = events.filter(e => e.type === endType);
+  for (let i = starts.length - 1; i >= 0; i--) {
+    const sid = (starts[i] as any).extras?.[key] as string | undefined;
+    if (!sid) continue;
+    const hasEnd = ends.some(en => (en as any).extras?.[key] === sid);
+    if (!hasEnd) return sid;
+  }
+  const lastStart = starts[starts.length - 1];
+  if (lastStart) {
+    const hasEndAfter = ends.some(en => en.ts > lastStart.ts);
+    if (!hasEndAfter) return '__legacy__';
+  }
+  return null;
+}
+
+function getNextDayIndex(events: AppEvent[]): number {
+  const closes = events.filter(e => e.type === 'rest_end' && (e as any).extras?.dayClose === true);
+  const idxs = closes
+    .map(e => (e as any).extras?.dayIndex)
+    .filter((n: any) => typeof n === 'number') as number[];
+  if (idxs.length > 0) return Math.max(...idxs) + 1;
+  return closes.length + 1;
+}
+
+export default function HomeScreen() {
+  const navigate = useNavigate();
+  const [tripId, setTripId] = useState<string | null>(null);
+  const [events, setEvents] = useState<AppEvent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [odoDialog, setOdoDialog] = useState<null | { kind: 'trip_start' | 'rest_start' | 'trip_end' }>(null);
+  const [confirmDayCloseOpen, setConfirmDayCloseOpen] = useState(false);
+  const [fuelOpen, setFuelOpen] = useState(false);
+
+  const openRestSessionId = useMemo(() => getOpenRestSessionId(events), [events]);
+  const openLoadSessionId = useMemo(() => getOpenToggle(events, 'load_start', 'load_end', 'loadSessionId'), [events]);
+  const openBreakSessionId = useMemo(() => getOpenToggle(events, 'break_start', 'break_end', 'breakSessionId'), [events]);
+
+  const restActive = !!openRestSessionId;
+  const loadActive = !!openLoadSessionId;
+  const breakActive = !!openBreakSessionId;
+  const canStartRest = !loadActive && !breakActive && !restActive;
+  const canStartLoad = !restActive && !breakActive && !loadActive;
+  const canStartBreak = !restActive && !loadActive && !breakActive;
+  const nextDayIndex = useMemo(() => getNextDayIndex(events), [events]);
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      const active = await getActiveTripId();
+      setTripId(active);
+      if (active) {
+        const ev = await getEventsByTripId(active);
+        setEvents(ev);
+      } else {
+        setEvents([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  // Render when no trip is active
+  if (!tripId) {
+    return (
+      <div style={{ padding: 16, maxWidth: 720, margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>RunLog</div>
+          <Link to="/history" style={{ color: '#93c5fd' }}>
+            履歴
+          </Link>
+        </div>
+        <BigButton
+          label={loading ? '読み込み中…' : '運行開始'}
+          disabled={loading}
+          onClick={() => setOdoDialog({ kind: 'trip_start' })}
+        />
+        <OdoDialog
+          open={odoDialog?.kind === 'trip_start'}
+          title="運行開始"
+          description="運行開始時のオドメーター（km）を入力してください"
+          onCancel={() => setOdoDialog(null)}
+          onConfirm={async odoKm => {
+            setOdoDialog(null);
+            setLoading(true);
+            try {
+              const geo = await getGeo();
+              const { tripId: newTripId } = await startTrip({ odoKm, geo });
+              setTripId(newTripId);
+              const ev = await getEventsByTripId(newTripId);
+              setEvents(ev);
+              navigate(`/trip/${newTripId}`);
+            } catch (e: any) {
+              alert(e?.message ?? '運行開始に失敗しました');
+            } finally {
+              setLoading(false);
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  // trip is active
+  const tripStart = events.find(e => e.type === 'trip_start') as any;
+  const tripStartOdo = tripStart?.extras?.odoKm;
+  return (
+    <div style={{ padding: 16, maxWidth: 720, margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>運行中</div>
+          <div style={{ opacity: 0.85, fontSize: 13 }}>
+            開始: {tripStart?.ts ? new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(tripStart.ts)) : '-'} / 開始ODO: {tripStartOdo ?? '-'} km
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Link to={`/trip/${tripId}`} style={{ color: '#93c5fd' }}>
+            詳細
+          </Link>
+          <Link to="/history" style={{ color: '#93c5fd' }}>
+            履歴
+          </Link>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {/* End trip */}
+        <BigButton label="運行終了" variant="danger" onClick={() => setOdoDialog({ kind: 'trip_end' })} />
+        {/* Load (積込) */}
+        {loadActive ? (
+          <BigButton
+            label="積込終了"
+            variant="neutral"
+            onClick={async () => {
+              try {
+                const geo = await getGeo();
+                await endLoad({ tripId, geo });
+                await refresh();
+              } catch (e: any) {
+                alert(e?.message ?? '積込終了に失敗しました');
+              }
+            }}
+          />
+        ) : (
+          <BigButton
+            label="積込開始"
+            disabled={!canStartLoad}
+            onClick={async () => {
+              try {
+                const geo = await getGeo();
+                await startLoad({ tripId, geo });
+                await refresh();
+              } catch (e: any) {
+                alert(e?.message ?? '積込開始に失敗しました');
+              }
+            }}
+          />
+        )}
+        {/* Break (休憩) */}
+        {breakActive ? (
+          <BigButton
+            label="休憩終了"
+            variant="neutral"
+            onClick={async () => {
+              try {
+                const geo = await getGeo();
+                await endBreak({ tripId, geo });
+                await refresh();
+              } catch (e: any) {
+                alert(e?.message ?? '休憩終了に失敗しました');
+              }
+            }}
+          />
+        ) : (
+          <BigButton
+            label="休憩開始"
+            disabled={!canStartBreak}
+            onClick={async () => {
+              try {
+                const geo = await getGeo();
+                await startBreak({ tripId, geo });
+                await refresh();
+              } catch (e: any) {
+                alert(e?.message ?? '休憩開始に失敗しました');
+              }
+            }}
+          />
+        )}
+        {/* Rest (休息) */}
+        {restActive ? (
+          <BigButton label="休息終了" variant="neutral" onClick={() => setConfirmDayCloseOpen(true)} />
+        ) : (
+          <BigButton
+            label="休息開始（オド入力）"
+            disabled={!canStartRest}
+            onClick={() => setOdoDialog({ kind: 'rest_start' })}
+          />
+        )}
+        {/* Fuel (給油) */}
+        <BigButton label="給油（数量入力）" onClick={() => setFuelOpen(true)} />
+        {/* Expressway (高速道路) */}
+        <BigButton
+          label="高速道路（IC記録）"
+          onClick={async () => {
+            try {
+              const geo = await getGeo();
+              await addExpressway({ tripId, geo });
+              alert('高速道路を記録しました（IC名はオンライン時に自動取得します）');
+              await refresh();
+            } catch (e: any) {
+              alert(e?.message ?? '高速道路の記録に失敗しました');
+            }
+          }}
+        />
+        {/* Boarding (乗船) */}
+        <BigButton
+          label="乗船"
+          onClick={async () => {
+            try {
+              const geo = await getGeo();
+              await addBoarding({ tripId, geo });
+              await refresh();
+            } catch (e: any) {
+              alert(e?.message ?? '乗船の記録に失敗しました');
+            }
+          }}
+        />
+      </div>
+      {/* Fuel dialog */}
+      <FuelDialog
+        open={fuelOpen}
+        onCancel={() => setFuelOpen(false)}
+        onConfirm={async liters => {
+          setFuelOpen(false);
+          try {
+            const geo = await getGeo();
+            await addRefuel({ tripId, liters, geo });
+            await refresh();
+          } catch (e: any) {
+            alert(e?.message ?? '給油の保存に失敗しました');
+          }
+        }}
+      />
+      {/* Rest start dialog */}
+      <OdoDialog
+        open={odoDialog?.kind === 'rest_start'}
+        title="休息開始"
+        description="休息開始時のオドメーター（km）を入力してください（分割休息も毎回入力）"
+        onCancel={() => setOdoDialog(null)}
+        onConfirm={async odoKm => {
+          setOdoDialog(null);
+          setLoading(true);
+          try {
+            const geo = await getGeo();
+            await startRest({ tripId, odoKm, geo });
+            await refresh();
+          } catch (e: any) {
+            alert(e?.message ?? '休息開始に失敗しました');
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
+      {/* Rest end confirm */}
+      <ConfirmDialog
+        open={confirmDayCloseOpen}
+        title="日次確定"
+        message={`${nextDayIndex}日目の運行は終了でよろしいですか？（分割休息の場合は「いいえ」）`}
+        yesText="はい（締める）"
+        noText="いいえ（分割休息）"
+        onYes={async () => {
+          setConfirmDayCloseOpen(false);
+          if (!openRestSessionId) return;
+          setLoading(true);
+          try {
+            const geo = await getGeo();
+            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: true, geo });
+            await refresh();
+          } catch (e: any) {
+            alert(e?.message ?? '休息終了に失敗しました');
+          } finally {
+            setLoading(false);
+          }
+        }}
+        onNo={async () => {
+          setConfirmDayCloseOpen(false);
+          if (!openRestSessionId) return;
+          setLoading(true);
+          try {
+            const geo = await getGeo();
+            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: false, geo });
+            await refresh();
+          } catch (e: any) {
+            alert(e?.message ?? '休息終了に失敗しました');
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
+      {/* Trip end dialog */}
+      <OdoDialog
+        open={odoDialog?.kind === 'trip_end'}
+        title="運行終了"
+        description="運行終了時のオドメーター（km）を入力してください（総距離と最終区間距離を計算します）"
+        onCancel={() => setOdoDialog(null)}
+        onConfirm={async odoEndKm => {
+          setOdoDialog(null);
+          setLoading(true);
+          try {
+            const geo = await getGeo();
+            const { event } = await endTrip({ tripId, odoEndKm, geo });
+            alert(
+              `運行終了\n` +
+                `総距離: ${event.extras.totalKm} km\n` +
+                `最終区間: ${event.extras.lastLegKm} km`,
+            );
+            navigate('/history');
+          } catch (e: any) {
+            alert(e?.message ?? '運行終了に失敗しました');
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
+    </div>
+  );
+}
