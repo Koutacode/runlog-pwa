@@ -4,6 +4,7 @@ import BigButton from '../components/BigButton';
 import OdoDialog from '../components/OdoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import FuelDialog from '../components/FuelDialog';
+import InstallButton from '../components/InstallButton';
 import { getGeo } from '../../services/geo';
 import {
   getActiveTripId,
@@ -107,22 +108,25 @@ export default function HomeScreen() {
   if (!tripId) {
     return (
       <div style={{ padding: 16, maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ fontSize: 20, fontWeight: 900 }}>RunLog</div>
-          <Link to="/history" style={{ color: '#93c5fd' }}>
-            履歴
-          </Link>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 20, fontWeight: 900 }}>RunLog</div>
+        <Link to="/history" style={{ color: '#93c5fd' }}>
+          履歴
+        </Link>
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>
         <BigButton
           label={loading ? '読み込み中…' : '運行開始'}
           disabled={loading}
           onClick={() => setOdoDialog({ kind: 'trip_start' })}
         />
-        <OdoDialog
-          open={odoDialog?.kind === 'trip_start'}
-          title="運行開始"
-          description="運行開始時のオドメーター（km）を入力してください"
-          onCancel={() => setOdoDialog(null)}
+        <InstallButton />
+      </div>
+      <OdoDialog
+        open={odoDialog?.kind === 'trip_start'}
+        title="運行開始"
+        description="運行開始時のオドメーター（km）を入力してください"
+        onCancel={() => setOdoDialog(null)}
           onConfirm={async odoKm => {
             setOdoDialog(null);
             setLoading(true);
