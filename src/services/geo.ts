@@ -34,7 +34,7 @@ export async function reverseGeocode(geo: Geo): Promise<string | undefined> {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(
       lng,
-    )}&zoom=17&addressdetails=1`;
+    )}&zoom=19&addressdetails=1`;
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { 'Accept-Language': 'ja' },
@@ -59,6 +59,20 @@ export async function reverseGeocode(geo: Geo): Promise<string | undefined> {
         seen.add(p);
         return true;
       });
+
+    // If the structured address is too短いときは display_name から補完する
+    if (Array.isArray(parts) && parts.length < 3 && data?.display_name) {
+      const displayParts = data.display_name
+        .split(',')
+        .map((p: string) => p.trim())
+        .filter(Boolean)
+        .filter(p => {
+          if (seen.has(p)) return false;
+          seen.add(p);
+          return true;
+        });
+      parts.push(...displayParts);
+    }
 
     const text = parts.join(' ');
     return text || data?.display_name;
