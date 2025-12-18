@@ -105,6 +105,14 @@ export function buildTripViewModel(tripId: string, events: AppEvent[]): TripView
  */
 export function buildTimeline(events: AppEvent[]): TimelineItem[] {
   const sorted = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
+  const formatGeo = (e: AppEvent) => {
+    if (e.address) return e.address as string;
+    if (e.geo) {
+      const { lat, lng } = e.geo as any;
+      return `(${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)})`;
+    }
+    return undefined;
+  };
   const label = (e: AppEvent) => {
     switch (e.type) {
       case 'trip_start':
@@ -157,6 +165,8 @@ export function buildTimeline(events: AppEvent[]): TimelineItem[] {
       const di = (e as any).extras?.dayIndex;
       detail = dc ? `${di ?? ''}日目を締める` : '分割休息';
     }
-    return { ts: e.ts, title: label(e), detail };
+    const loc = formatGeo(e);
+    const mergedDetail = detail ? (loc ? `${detail} / ${loc}` : detail) : loc;
+    return { ts: e.ts, title: label(e), detail: mergedDetail };
   });
 }

@@ -64,7 +64,7 @@ export default function InstallButton() {
           setPromptEvent(null);
         }
       }}
-      disabled={!promptEvent || installing}
+      disabled={installing}
       style={{
         width: '100%',
         height: 52,

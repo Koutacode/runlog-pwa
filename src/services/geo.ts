@@ -21,3 +21,45 @@ export async function getGeo(): Promise<Geo | undefined> {
     );
   });
 }
+
+/**
+ * reverseGeocode queries a public reverse geocoding service (Nominatim) to get
+ * a human-readable address. If the network request fails or is unavailable it
+ * returns undefined so that callers can degrade gracefully.
+ */
+export async function reverseGeocode(geo: Geo): Promise<string | undefined> {
+  const { lat, lng } = geo;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), 5000);
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(
+      lng,
+    )}&zoom=14&addressdetails=1`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'Accept-Language': 'ja' },
+    });
+    if (!res.ok) return undefined;
+    const data = await res.json();
+    const addr = data?.address ?? {};
+    const city = addr.city || addr.town || addr.village || addr.hamlet;
+    const parts = [addr.state, addr.county, city].filter(Boolean);
+    const text = parts.join(' ');
+    return text || data?.display_name;
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+/**
+ * getGeoWithAddress wraps getGeo and optionally resolves a human-readable
+ * address. If address lookup fails it still returns the geo.
+ */
+export async function getGeoWithAddress(): Promise<{ geo?: Geo; address?: string }> {
+  const geo = await getGeo();
+  if (!geo) return { geo: undefined, address: undefined };
+  const address = await reverseGeocode(geo);
+  return { geo, address };
+}

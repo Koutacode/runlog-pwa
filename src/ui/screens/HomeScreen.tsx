@@ -5,7 +5,7 @@ import OdoDialog from '../components/OdoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import FuelDialog from '../components/FuelDialog';
 import InstallButton from '../components/InstallButton';
-import { getGeo } from '../../services/geo';
+import { getGeoWithAddress } from '../../services/geo';
 import {
   getActiveTripId,
   getEventsByTripId,
@@ -81,7 +81,7 @@ export default function HomeScreen() {
   const [confirmDayCloseOpen, setConfirmDayCloseOpen] = useState(false);
   const [fuelOpen, setFuelOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [geoStatus, setGeoStatus] = useState<{ lat: number; lng: number; accuracy?: number; at: string } | null>(null);
+  const [geoStatus, setGeoStatus] = useState<{ lat: number; lng: number; accuracy?: number; at: string; address?: string } | null>(null);
   const [geoError, setGeoError] = useState<string | null>(null);
 
   const openRestSessionId = useMemo(() => getOpenRestSessionId(events), [events]);
@@ -119,7 +119,7 @@ export default function HomeScreen() {
   async function captureGeoOnce() {
     try {
       setGeoError(null);
-      const geo = await getGeo();
+      const { geo, address } = await getGeoWithAddress();
       if (geo) {
         setGeoStatus({
           lat: geo.lat,
@@ -127,6 +127,9 @@ export default function HomeScreen() {
           accuracy: geo.accuracy,
           at: new Date().toISOString(),
         });
+        if (address) {
+          setGeoStatus(prev => (prev ? { ...prev, address } : null));
+        }
       } else {
         setGeoError('位置情報が取得できませんでした（ブラウザ設定を確認してください）');
       }
@@ -172,8 +175,8 @@ export default function HomeScreen() {
             setOdoDialog(null);
             setLoading(true);
             try {
-              const geo = await getGeo();
-              const { tripId: newTripId } = await startTrip({ odoKm, geo });
+              const { geo, address } = await getGeoWithAddress();
+              const { tripId: newTripId } = await startTrip({ odoKm, geo, address });
               setTripId(newTripId);
               const ev = await getEventsByTripId(newTripId);
               setEvents(ev);
@@ -256,6 +259,7 @@ export default function HomeScreen() {
             <div>緯度: {geoStatus.lat.toFixed(5)}</div>
             <div>経度: {geoStatus.lng.toFixed(5)}</div>
             {geoStatus.accuracy != null && <div>精度: ±{Math.round(geoStatus.accuracy)}m</div>}
+            {geoStatus.address && <div>地点: {geoStatus.address}</div>}
             <div style={{ opacity: 0.8 }}>取得時刻: {new Date(geoStatus.at).toLocaleString('ja-JP')}</div>
           </div>
         ) : (
@@ -288,8 +292,8 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
-                const geo = await getGeo();
-                await endLoad({ tripId, geo });
+                const { geo, address } = await getGeoWithAddress();
+                await endLoad({ tripId, geo, address });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '積込終了に失敗しました');
@@ -302,8 +306,8 @@ export default function HomeScreen() {
             disabled={!canStartLoad}
             onClick={async () => {
               try {
-                const geo = await getGeo();
-                await startLoad({ tripId, geo });
+                const { geo, address } = await getGeoWithAddress();
+                await startLoad({ tripId, geo, address });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '積込開始に失敗しました');
@@ -318,8 +322,8 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
-                const geo = await getGeo();
-                await endBreak({ tripId, geo });
+                const { geo, address } = await getGeoWithAddress();
+                await endBreak({ tripId, geo, address });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '休憩終了に失敗しました');
@@ -332,8 +336,8 @@ export default function HomeScreen() {
             disabled={!canStartBreak}
             onClick={async () => {
               try {
-                const geo = await getGeo();
-                await startBreak({ tripId, geo });
+                const { geo, address } = await getGeoWithAddress();
+                await startBreak({ tripId, geo, address });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '休憩開始に失敗しました');
@@ -358,8 +362,8 @@ export default function HomeScreen() {
           label="高速道路（IC記録）"
           onClick={async () => {
             try {
-              const geo = await getGeo();
-              await addExpressway({ tripId, geo });
+              const { geo, address } = await getGeoWithAddress();
+              await addExpressway({ tripId, geo, address });
               alert('高速道路を記録しました（IC名はオンライン時に自動取得します）');
               await refresh();
             } catch (e: any) {
@@ -372,8 +376,8 @@ export default function HomeScreen() {
           label="乗船"
           onClick={async () => {
             try {
-              const geo = await getGeo();
-              await addBoarding({ tripId, geo });
+              const { geo, address } = await getGeoWithAddress();
+              await addBoarding({ tripId, geo, address });
               await refresh();
             } catch (e: any) {
               alert(e?.message ?? '乗船の記録に失敗しました');
@@ -388,8 +392,8 @@ export default function HomeScreen() {
         onConfirm={async liters => {
           setFuelOpen(false);
           try {
-            const geo = await getGeo();
-            await addRefuel({ tripId, liters, geo });
+            const { geo, address } = await getGeoWithAddress();
+            await addRefuel({ tripId, liters, geo, address });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '給油の保存に失敗しました');
@@ -406,8 +410,8 @@ export default function HomeScreen() {
           setOdoDialog(null);
           setLoading(true);
           try {
-            const geo = await getGeo();
-            await startRest({ tripId, odoKm, geo });
+            const { geo, address } = await getGeoWithAddress();
+            await startRest({ tripId, odoKm, geo, address });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '休息開始に失敗しました');
@@ -428,8 +432,8 @@ export default function HomeScreen() {
           if (!openRestSessionId) return;
           setLoading(true);
           try {
-            const geo = await getGeo();
-            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: true, geo });
+            const { geo, address } = await getGeoWithAddress();
+            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: true, geo, address });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '休息終了に失敗しました');
@@ -442,8 +446,8 @@ export default function HomeScreen() {
           if (!openRestSessionId) return;
           setLoading(true);
           try {
-            const geo = await getGeo();
-            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: false, geo });
+            const { geo, address } = await getGeoWithAddress();
+            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: false, geo, address });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '休息終了に失敗しました');
@@ -462,8 +466,8 @@ export default function HomeScreen() {
           setOdoDialog(null);
           setLoading(true);
           try {
-            const geo = await getGeo();
-            const { event } = await endTrip({ tripId, odoEndKm, geo });
+            const { geo, address } = await getGeoWithAddress();
+            const { event } = await endTrip({ tripId, odoEndKm, geo, address });
             alert(
               `運行終了\n` +
                 `総距離: ${event.extras.totalKm} km\n` +
