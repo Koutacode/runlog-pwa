@@ -110,7 +110,8 @@ export default function HomeScreen() {
 
   // Fill missing addresses later whenオンラインになった際に補完する
   async function backfillAddresses(active: string | null) {
-    const updated = await backfillMissingAddresses();
+    // Attempt multiple batches (bigger limit) whenオンライン復帰や起動時にできるだけ埋める
+    const updated = await backfillMissingAddresses(40, 3);
     if (updated && active) {
       const ev = await getEventsByTripId(active);
       setEvents(ev);
@@ -152,6 +153,15 @@ export default function HomeScreen() {
       void backfillAddresses(tripId);
     }, 45000);
     return () => clearInterval(id);
+  }, [tripId]);
+
+  // Retry backfill whenオンラインに戻ったら即走らせる
+  useEffect(() => {
+    const handler = () => {
+      void backfillAddresses(tripId);
+    };
+    window.addEventListener('online', handler);
+    return () => window.removeEventListener('online', handler);
   }, [tripId]);
 
   useEffect(() => {

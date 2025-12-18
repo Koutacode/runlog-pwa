@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { deleteTrip, listTrips, TripSummary } from '../../db/repositories';
+import { deleteTrip, getAllEvents, listTrips, TripSummary } from '../../db/repositories';
 
 function fmtLocal(ts?: string) {
   if (!ts) return '-';
@@ -32,9 +32,32 @@ function fmtDuration(mins?: number) {
   return `${h}時間${m}分`;
 }
 
+function downloadBlob(filename: string, data: string, type: string) {
+  const blob = new Blob([data], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function toCsvValue(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') {
+    v = JSON.stringify(v);
+  }
+  const s = String(v);
+  const escaped = s.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
 export default function HistoryScreen() {
   const [rows, setRows] = useState<TripSummary[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   async function load() {
     setErr(null);
     try {
@@ -57,11 +80,73 @@ export default function HistoryScreen() {
       setErr(e?.message ?? '削除に失敗しました');
     }
   }
+
+  async function handleExportJSON() {
+    setExporting(true);
+    setErr(null);
+    try {
+      const events = await getAllEvents();
+      downloadBlob(`runlog-events-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(events, null, 2), 'application/json');
+    } catch (e: any) {
+      setErr(e?.message ?? 'エクスポートに失敗しました');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleExportCSV() {
+    setExporting(true);
+    setErr(null);
+    try {
+      const events = await getAllEvents();
+      const header = ['id', 'tripId', 'type', 'ts', 'address', 'lat', 'lng', 'accuracy', 'syncStatus', 'extras'];
+      const rowsCsv = events.map(ev => {
+        const geo = (ev as any).geo as any;
+        const extras = (ev as any).extras ?? {};
+        return [
+          toCsvValue(ev.id),
+          toCsvValue(ev.tripId),
+          toCsvValue(ev.type),
+          toCsvValue(ev.ts),
+          toCsvValue(ev.address ?? ''),
+          toCsvValue(geo?.lat ?? ''),
+          toCsvValue(geo?.lng ?? ''),
+          toCsvValue(geo?.accuracy ?? ''),
+          toCsvValue(ev.syncStatus),
+          toCsvValue(extras),
+        ].join(',');
+      });
+      const csv = [header.join(','), ...rowsCsv].join('\r\n');
+      downloadBlob(`runlog-events-${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv');
+    } catch (e: any) {
+      setErr(e?.message ?? 'CSVエクスポートに失敗しました');
+    } finally {
+      setExporting(false);
+    }
+  }
   return (
     <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 20, fontWeight: 900 }}>履歴</div>
-        <Link to="/" className="pill-link">ホーム</Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            onClick={handleExportJSON}
+            disabled={exporting}
+            className="pill-link"
+            style={{ borderColor: '#334155', background: '#0f172a' }}
+          >
+            {exporting ? '出力中…' : 'JSONエクスポート'}
+          </button>
+          <button
+            onClick={handleExportCSV}
+            disabled={exporting}
+            className="pill-link"
+            style={{ borderColor: '#334155', background: '#0f172a' }}
+          >
+            {exporting ? '出力中…' : 'CSVエクスポート'}
+          </button>
+          <Link to="/" className="pill-link">ホーム</Link>
+        </div>
       </div>
       {err && <div style={{ background: '#7f1d1d', color: '#fff', padding: 12, borderRadius: 12 }}>{err}</div>}
       <div style={{ display: 'grid', gap: 8 }}>

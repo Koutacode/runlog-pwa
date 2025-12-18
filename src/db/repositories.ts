@@ -496,27 +496,34 @@ export async function listTrips(): Promise<TripSummary[]> {
  * Limits requests to avoid spamming the API.
  * Returns true if any address was updated.
  */
-export async function backfillMissingAddresses(limit = 15): Promise<boolean> {
+export async function backfillMissingAddresses(limit = 30, batches = 2): Promise<boolean> {
   if (typeof navigator === 'undefined' || !navigator.onLine) return false;
-  const candidates = await db.events
-    .filter(e => !e.address && !!(e as any).geo)
-    .limit(limit)
-    .toArray();
-  if (candidates.length === 0) return false;
-  let updated = false;
-  for (const ev of candidates) {
-    const geo = (ev as any).geo as Geo;
-    try {
-      const addr = await reverseGeocode(geo);
-      if (addr) {
-        await updateEventAddress(ev.id, addr);
-        updated = true;
+
+  let updatedAny = false;
+  for (let i = 0; i < batches; i++) {
+    const candidates = await db.events
+      .filter(e => !e.address && !!(e as any).geo)
+      .limit(limit)
+      .toArray();
+    if (candidates.length === 0) break;
+
+    let updatedBatch = false;
+    for (const ev of candidates) {
+      const geo = (ev as any).geo as Geo;
+      try {
+        const addr = await reverseGeocode(geo);
+        if (addr) {
+          await updateEventAddress(ev.id, addr);
+          updatedAny = true;
+          updatedBatch = true;
+        }
+      } catch {
+        // ignore failures; will retry later
       }
-    } catch {
-      // ignore failures; will retry later
     }
+    if (!updatedBatch) break; // avoid tight loops when nothing could be resolved
   }
-  return updated;
+  return updatedAny;
 }
 
 export async function deleteTrip(tripId: string): Promise<void> {
