@@ -83,7 +83,10 @@ export async function updateEventAddress(eventId: string, address?: string) {
 }
 
 export async function updateEventTimestamp(eventId: string, ts: string) {
+  const ev = await db.events.get(eventId);
+  if (!ev) throw new Error('イベントが見つかりません');
   await db.events.update(eventId, { ts, syncStatus: 'pending' });
+  await rebalanceDayCloseIndices(ev.tripId);
 }
 
 export async function addEvent(event: AppEvent) {
@@ -524,4 +527,58 @@ export async function deleteTrip(tripId: string): Promise<void> {
       await db.meta.delete(META_ACTIVE_TRIP_ID);
     }
   });
+}
+
+/**
+ * Delete a single event. Trip startは運行の基点なので削除不可とする。
+ * rest_end (dayClose) の並びが変わる場合は日次インデックスを再計算する。
+ */
+export async function deleteEvent(eventId: string): Promise<void> {
+  const ev = await db.events.get(eventId);
+  if (!ev) return;
+  if (ev.type === 'trip_start') throw new Error('運行開始イベントは削除できません（運行ごと削除してください）');
+  await db.events.delete(eventId);
+  await rebalanceDayCloseIndices(ev.tripId);
+}
+
+/**
+ * 手動で住所を上書きする。同期が必要な場合を想定し syncStatus を pending に戻す。
+ */
+export async function updateEventAddressManual(eventId: string, address: string) {
+  if (!address.trim()) throw new Error('住所を入力してください');
+  const ev = await db.events.get(eventId);
+  if (!ev) throw new Error('イベントが見つかりません');
+  await db.events.update(eventId, { address: address.trim(), syncStatus: 'pending' });
+}
+
+/**
+ * 位置情報があるイベントに対して逆ジオコーディングを再実行する。
+ * より詳細な住所を取得できた場合に上書きする。
+ */
+export async function refreshEventAddressFromGeo(eventId: string): Promise<string | undefined> {
+  const ev = await db.events.get(eventId);
+  if (!ev) throw new Error('イベントが見つかりません');
+  const geo = (ev as any).geo as Geo | undefined;
+  if (!geo) throw new Error('このイベントには位置情報が保存されていません');
+  const addr = await reverseGeocode(geo);
+  if (addr) {
+    await db.events.update(eventId, { address: addr, syncStatus: 'pending' });
+  }
+  return addr;
+}
+
+// ---- Helpers ----
+
+async function rebalanceDayCloseIndices(tripId: string) {
+  const events = await getEventsByTripId(tripId);
+  const dayCloses = events.filter(
+    e => e.type === 'rest_end' && (e as RestEndEvent).extras?.dayClose
+  ) as RestEndEvent[];
+  const sorted = [...dayCloses].sort((a, b) => a.ts.localeCompare(b.ts));
+  await Promise.all(
+    sorted.map((e, idx) => {
+      const extras = { ...(e as any).extras, dayIndex: idx + 1 };
+      return db.events.update(e.id, { extras });
+    })
+  );
 }

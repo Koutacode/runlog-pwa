@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { deleteTrip, getEventsByTripId, updateEventTimestamp } from '../../db/repositories';
+import {
+  deleteEvent,
+  deleteTrip,
+  getEventsByTripId,
+  refreshEventAddressFromGeo,
+  updateEventAddressManual,
+  updateEventTimestamp,
+} from '../../db/repositories';
 import type { AppEvent } from '../../domain/types';
 import { buildTripViewModel, buildTimeline, TripViewModel } from '../../state/selectors';
 
@@ -23,8 +30,10 @@ export default function TripDetail() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; value: string } | null>(null);
+  const [addressEditing, setAddressEditing] = useState<{ id: string; value: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [workingId, setWorkingId] = useState<string | null>(null);
 
   const timeline = events.length ? buildTimeline(events) : vm?.timeline ?? [];
 
@@ -54,6 +63,74 @@ export default function TripDetail() {
   useEffect(() => {
     load();
   }, [tripId]);
+
+  async function handleSaveTime() {
+    if (!editing) return;
+    const iso = fromLocalInputValue(editing.value);
+    if (!iso) {
+      alert('日時の形式が不正です');
+      return;
+    }
+    setSaving(true);
+    setWorkingId(editing.id);
+    try {
+      await updateEventTimestamp(editing.id, iso);
+      setEditing(null);
+      await load();
+    } catch (e: any) {
+      setErr(e?.message ?? '更新に失敗しました');
+    } finally {
+      setSaving(false);
+      setWorkingId(null);
+    }
+  }
+
+  async function handleSaveAddress() {
+    if (!addressEditing) return;
+    setSaving(true);
+    setWorkingId(addressEditing.id);
+    try {
+      await updateEventAddressManual(addressEditing.id, addressEditing.value);
+      setAddressEditing(null);
+      await load();
+    } catch (e: any) {
+      setErr(e?.message ?? '住所の保存に失敗しました');
+    } finally {
+      setSaving(false);
+      setWorkingId(null);
+    }
+  }
+
+  async function handleRefreshAddress(eventId: string) {
+    setWorkingId(eventId);
+    try {
+      const updated = await refreshEventAddressFromGeo(eventId);
+      if (updated) {
+        await load();
+      } else {
+        alert('住所を再取得できませんでした（通信状況と権限を確認してください）');
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? '住所の再取得に失敗しました');
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
+  async function handleDeleteEvent(eventId: string) {
+    const ok = window.confirm('このイベントを削除します。よろしいですか？');
+    if (!ok) return;
+    setWorkingId(eventId);
+    try {
+      await deleteEvent(eventId);
+      await load();
+    } catch (e: any) {
+      setErr(e?.message ?? '削除に失敗しました');
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
   if (!tripId) {
     return <div style={{ padding: 16 }}>tripId が不正です</div>;
   }
@@ -149,12 +226,15 @@ export default function TripDetail() {
                 ))}
               </div>
             </div>
-            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
+              <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
               <div style={{ fontWeight: 900, marginBottom: 8 }}>イベント一覧</div>
               <div style={{ display: 'grid', gap: 6 }}>
                 {events.map((ev, idx) => {
                   const t = timeline[idx];
                   const isEditing = editing?.id === ev.id;
+                  const isEditingAddress = addressEditing?.id === ev.id;
+                  const busy = workingId === ev.id;
+                  const geo = (ev as any).geo as any;
                   return (
                     <div key={ev.id} style={{ padding: '8px 10px', borderRadius: 12, background: '#0b0b0b' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
@@ -173,29 +253,12 @@ export default function TripDetail() {
                             )}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           {isEditing ? (
                             <>
                               <button
-                                onClick={async () => {
-                                  if (!editing) return;
-                                  const iso = fromLocalInputValue(editing.value);
-                                  if (!iso) {
-                                    alert('日時の形式が不正です');
-                                    return;
-                                  }
-                                  setSaving(true);
-                                  try {
-                                    await updateEventTimestamp(editing.id, iso);
-                                    setEditing(null);
-                                    await load();
-                                  } catch (e: any) {
-                                    setErr(e?.message ?? '更新に失敗しました');
-                                  } finally {
-                                    setSaving(false);
-                                  }
-                                }}
-                                disabled={saving}
+                                onClick={handleSaveTime}
+                                disabled={saving || busy}
                                 style={{ padding: '6px 8px', borderRadius: 8 }}
                               >
                                 {saving ? '保存中…' : '保存'}
@@ -212,12 +275,67 @@ export default function TripDetail() {
                               onClick={() => setEditing({ id: ev.id, value: toLocalInputValue(ev.ts) })}
                               style={{ padding: '6px 8px', borderRadius: 8 }}
                             >
-                              編集
+                              時刻編集
                             </button>
                           )}
+                          <button
+                            onClick={() => void handleDeleteEvent(ev.id)}
+                            disabled={busy}
+                            style={{ padding: '6px 8px', borderRadius: 8, background: '#7f1d1d', color: '#fff' }}
+                          >
+                            {busy ? '削除中…' : '削除'}
+                          </button>
                         </div>
                       </div>
                       {t?.detail && <div style={{ opacity: 0.85, fontSize: 12, marginTop: 4 }}>{t.detail}</div>}
+                      <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                        <div style={{ fontSize: 12, opacity: 0.85 }}>
+                          地点: {ev.address ?? '未取得'}
+                          {geo ? (
+                            <span style={{ marginLeft: 6, opacity: 0.75 }}>
+                              ({Number(geo.lat).toFixed(5)}, {Number(geo.lng).toFixed(5)})
+                            </span>
+                          ) : (
+                            <span style={{ marginLeft: 6, opacity: 0.65 }}>(位置情報なし)</span>
+                          )}
+                        </div>
+                        {isEditingAddress ? (
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <input
+                              type="text"
+                              value={addressEditing?.value ?? ''}
+                              onChange={e => setAddressEditing({ id: ev.id, value: e.target.value })}
+                              style={{ flex: 1, minWidth: 220, background: '#111', color: '#fff', border: '1px solid #374151', borderRadius: 8, padding: '6px 8px' }}
+                            />
+                            <button
+                              onClick={handleSaveAddress}
+                              disabled={saving || busy}
+                              style={{ padding: '6px 8px', borderRadius: 8 }}
+                            >
+                              {saving ? '保存中…' : '住所保存'}
+                            </button>
+                            <button onClick={() => setAddressEditing(null)} style={{ padding: '6px 8px', borderRadius: 8 }}>
+                              キャンセル
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button
+                              onClick={() => setAddressEditing({ id: ev.id, value: ev.address ?? '' })}
+                              style={{ padding: '6px 8px', borderRadius: 8 }}
+                            >
+                              住所編集
+                            </button>
+                            <button
+                              onClick={() => void handleRefreshAddress(ev.id)}
+                              disabled={!geo || busy}
+                              style={{ padding: '6px 8px', borderRadius: 8, opacity: geo ? 1 : 0.5 }}
+                            >
+                              {busy ? '再取得中…' : '位置から再取得'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

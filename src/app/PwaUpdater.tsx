@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import UpdateDialog from '../ui/components/UpdateDialog';
+import { APP_VERSION } from './version';
 
 /**
  * PwaUpdater listens for service worker updates and prompts the user to reload
@@ -15,7 +16,7 @@ export default function PwaUpdater() {
   const [remindLater, setRemindLater] = useState(false);
 
   useEffect(() => {
-    const unregister = registerSW({
+    const updateServiceWorker = registerSW({
       immediate: true,
       onNeedRefresh() {
         setNeedRefresh(true);
@@ -25,11 +26,11 @@ export default function PwaUpdater() {
         // Optionally notify the user that the app can be used offline.
       },
     });
-    setUpdateSW(() => unregister);
+    setUpdateSW(() => updateServiceWorker);
 
     // Periodically check for updates while the app is open.
     const interval = setInterval(() => {
-      unregister?.(false);
+      updateServiceWorker?.(false);
     }, 60 * 60 * 1000);
 
     return () => {
@@ -41,6 +42,7 @@ export default function PwaUpdater() {
     <>
       <UpdateDialog
         open={needRefresh}
+        version={APP_VERSION}
         onClose={() => setNeedRefresh(false)}
         onUpdate={() => {
           // Force the waiting worker to become active and reload the page.
@@ -65,6 +67,7 @@ export default function PwaUpdater() {
           }}
         >
           更新があります（押して適用）
+          <span style={{ marginLeft: 6, opacity: 0.85, fontSize: 12 }}>v{APP_VERSION}</span>
         </button>
       )}
     </>
