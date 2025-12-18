@@ -30,7 +30,7 @@ export async function getGeo(): Promise<Geo | undefined> {
 export async function reverseGeocode(geo: Geo): Promise<string | undefined> {
   const { lat, lng } = geo;
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 5000);
+  const id = setTimeout(() => controller.abort(), 8000);
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(
       lng,
@@ -41,14 +41,17 @@ export async function reverseGeocode(geo: Geo): Promise<string | undefined> {
     });
     if (!res.ok) return undefined;
     const data = await res.json();
+    const displayName: string | undefined = typeof data?.display_name === 'string'
+      ? data.display_name.replace(/,/g, ' ').replace(/\s+/g, ' ').trim()
+      : undefined;
     const addr = data?.address ?? {};
     const prefecture = addr.state;
     const county = addr.county || addr.city_district;
     const city = addr.city || addr.town || addr.village || addr.hamlet || addr.municipality;
     const area = addr.suburb || addr.quarter || addr.neighbourhood;
-    const block = addr.road;
-    const house = addr.house_number;
-    const detail = block && house ? `${block} ${house}` : block;
+    const block = addr.road || addr.residential;
+    const house = addr.house_number || addr.building || addr.house;
+    const detail = block && house ? `${block} ${house}` : block || house;
 
     // Deduplicate while preserving order
     const seen = new Set<string>();
@@ -60,9 +63,9 @@ export async function reverseGeocode(geo: Geo): Promise<string | undefined> {
         return true;
       });
 
-    // If the structured address is too短いときは display_name から補完する
-    if (Array.isArray(parts) && parts.length < 3 && data?.display_name) {
-      const displayParts = data.display_name
+    // display_name からも補完してできるだけ詳細を返す
+    if (displayName) {
+      const displayParts = displayName
         .split(',')
         .map((p: string) => p.trim())
         .filter(Boolean)
@@ -74,8 +77,8 @@ export async function reverseGeocode(geo: Geo): Promise<string | undefined> {
       parts.push(...displayParts);
     }
 
-    const text = parts.join(' ');
-    return text || data?.display_name;
+    const text = parts.join(' ').trim();
+    return text || displayName;
   } catch {
     return undefined;
   } finally {

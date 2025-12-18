@@ -5,7 +5,7 @@ import OdoDialog from '../components/OdoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import FuelDialog from '../components/FuelDialog';
 import InstallButton from '../components/InstallButton';
-import { getGeoWithAddress } from '../../services/geo';
+import { getGeo, getGeoWithAddress } from '../../services/geo';
 import {
   getActiveTripId,
   getEventsByTripId,
@@ -124,6 +124,14 @@ export default function HomeScreen() {
     }
   }
 
+  // Periodic backfill while画面を開いている間も走らせる
+  useEffect(() => {
+    const id = setInterval(() => {
+      void backfillAddresses(tripId);
+    }, 45000);
+    return () => clearInterval(id);
+  }, [tripId]);
+
   useEffect(() => {
     refresh();
   }, []);
@@ -183,22 +191,22 @@ export default function HomeScreen() {
         title="運行開始"
         description="運行開始時のオドメーター（km）を入力してください"
         onCancel={() => setOdoDialog(null)}
-          onConfirm={async odoKm => {
-            setOdoDialog(null);
-            setLoading(true);
-            try {
-              const { geo, address } = await getGeoWithAddress();
-              const { tripId: newTripId } = await startTrip({ odoKm, geo, address });
-              setTripId(newTripId);
-              const ev = await getEventsByTripId(newTripId);
-              setEvents(ev);
-            } catch (e: any) {
-              alert(e?.message ?? '運行開始に失敗しました');
-            } finally {
-              setLoading(false);
-            }
-          }}
-        />
+        onConfirm={async odoKm => {
+          setOdoDialog(null);
+          setLoading(true);
+          try {
+            const geo = await getGeo();
+            const { tripId: newTripId } = await startTrip({ odoKm, geo });
+            setTripId(newTripId);
+            const ev = await getEventsByTripId(newTripId);
+            setEvents(ev);
+          } catch (e: any) {
+            alert(e?.message ?? '運行開始に失敗しました');
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
       </div>
     );
   }
@@ -304,8 +312,8 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
-                const { geo, address } = await getGeoWithAddress();
-                await endLoad({ tripId, geo, address });
+                const geo = await getGeo();
+                await endLoad({ tripId, geo });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '積込終了に失敗しました');
@@ -318,8 +326,8 @@ export default function HomeScreen() {
             disabled={!canStartLoad}
             onClick={async () => {
               try {
-                const { geo, address } = await getGeoWithAddress();
-                await startLoad({ tripId, geo, address });
+                const geo = await getGeo();
+                await startLoad({ tripId, geo });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '積込開始に失敗しました');
@@ -334,8 +342,8 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
-                const { geo, address } = await getGeoWithAddress();
-                await endBreak({ tripId, geo, address });
+                const geo = await getGeo();
+                await endBreak({ tripId, geo });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '休憩終了に失敗しました');
@@ -348,8 +356,8 @@ export default function HomeScreen() {
             disabled={!canStartBreak}
             onClick={async () => {
               try {
-                const { geo, address } = await getGeoWithAddress();
-                await startBreak({ tripId, geo, address });
+                const geo = await getGeo();
+                await startBreak({ tripId, geo });
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '休憩開始に失敗しました');
@@ -374,8 +382,8 @@ export default function HomeScreen() {
           label="高速道路（IC記録）"
           onClick={async () => {
             try {
-              const { geo, address } = await getGeoWithAddress();
-              await addExpressway({ tripId, geo, address });
+              const geo = await getGeo();
+              await addExpressway({ tripId, geo });
               alert('高速道路を記録しました（IC名はオンライン時に自動取得します）');
               await refresh();
             } catch (e: any) {
@@ -388,8 +396,8 @@ export default function HomeScreen() {
           label="乗船"
           onClick={async () => {
             try {
-              const { geo, address } = await getGeoWithAddress();
-              await addBoarding({ tripId, geo, address });
+              const geo = await getGeo();
+              await addBoarding({ tripId, geo });
               await refresh();
             } catch (e: any) {
               alert(e?.message ?? '乗船の記録に失敗しました');
@@ -404,8 +412,8 @@ export default function HomeScreen() {
         onConfirm={async liters => {
           setFuelOpen(false);
           try {
-            const { geo, address } = await getGeoWithAddress();
-            await addRefuel({ tripId, liters, geo, address });
+            const geo = await getGeo();
+            await addRefuel({ tripId, liters, geo });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '給油の保存に失敗しました');
@@ -422,8 +430,8 @@ export default function HomeScreen() {
           setOdoDialog(null);
           setLoading(true);
           try {
-            const { geo, address } = await getGeoWithAddress();
-            await startRest({ tripId, odoKm, geo, address });
+            const geo = await getGeo();
+            await startRest({ tripId, odoKm, geo });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '休息開始に失敗しました');
@@ -444,8 +452,8 @@ export default function HomeScreen() {
           if (!openRestSessionId) return;
           setLoading(true);
           try {
-            const { geo, address } = await getGeoWithAddress();
-            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: true, geo, address });
+            const geo = await getGeo();
+            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: true, geo });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '休息終了に失敗しました');
@@ -458,8 +466,8 @@ export default function HomeScreen() {
           if (!openRestSessionId) return;
           setLoading(true);
           try {
-            const { geo, address } = await getGeoWithAddress();
-            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: false, geo, address });
+            const geo = await getGeo();
+            await endRest({ tripId, restSessionId: openRestSessionId, dayClose: false, geo });
             await refresh();
           } catch (e: any) {
             alert(e?.message ?? '休息終了に失敗しました');
@@ -474,16 +482,16 @@ export default function HomeScreen() {
         title="運行終了"
         description="運行終了時のオドメーター（km）を入力してください（総距離と最終区間距離を計算します）"
         onCancel={() => setOdoDialog(null)}
-        onConfirm={async odoEndKm => {
-          setOdoDialog(null);
-          setLoading(true);
-          try {
-            const { geo, address } = await getGeoWithAddress();
-            const { event } = await endTrip({ tripId, odoEndKm, geo, address });
-            alert(
-              `運行終了\n` +
-                `総距離: ${event.extras.totalKm} km\n` +
-                `最終区間: ${event.extras.lastLegKm} km`,
+          onConfirm={async odoEndKm => {
+            setOdoDialog(null);
+            setLoading(true);
+            try {
+              const geo = await getGeo();
+              const { event } = await endTrip({ tripId, odoEndKm, geo });
+              alert(
+                `運行終了\n` +
+                  `総距離: ${event.extras.totalKm} km\n` +
+                  `最終区間: ${event.extras.lastLegKm} km`,
             );
             await refresh();
           } catch (e: any) {

@@ -473,7 +473,7 @@ export async function listTrips(): Promise<TripSummary[]> {
  * Limits requests to avoid spamming the API.
  * Returns true if any address was updated.
  */
-export async function backfillMissingAddresses(limit = 5): Promise<boolean> {
+export async function backfillMissingAddresses(limit = 15): Promise<boolean> {
   if (typeof navigator === 'undefined' || !navigator.onLine) return false;
   const candidates = await db.events
     .filter(e => !e.address && !!(e as any).geo)
