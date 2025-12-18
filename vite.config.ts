@@ -19,6 +19,7 @@ export default defineConfig({
       manifest: {
         name: 'RunLog',
         short_name: 'RunLog',
+        id: basePath,
         start_url: basePath,
         scope: basePath,
         display: 'standalone',
