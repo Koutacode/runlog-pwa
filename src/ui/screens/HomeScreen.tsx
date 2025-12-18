@@ -174,7 +174,7 @@ export default function HomeScreen() {
       <div style={{ padding: 16, maxWidth: 720, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 20, fontWeight: 900 }}>RunLog</div>
-        <Link to="/history" style={{ color: '#93c5fd' }}>
+        <Link to="/history" className="pill-link">
           履歴
         </Link>
       </div>
@@ -234,15 +234,15 @@ export default function HomeScreen() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <Link to={`/trip/${tripId}`} style={{ color: '#93c5fd' }}>
+          <Link to={`/trip/${tripId}`} className="pill-link">
             詳細
           </Link>
-          <Link to="/history" style={{ color: '#93c5fd' }}>
+          <Link to="/history" className="pill-link">
             履歴
           </Link>
         </div>
       </div>
-      <div style={{ background: '#0b0b0b', color: '#fff', padding: 12, borderRadius: 14, marginBottom: 12 }}>
+      <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 14, marginBottom: 12 }}>
         <div style={{ fontWeight: 900, marginBottom: 6 }}>進行中のイベント</div>
         <div style={{ display: 'grid', gap: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
@@ -272,7 +272,7 @@ export default function HomeScreen() {
           )}
         </div>
       </div>
-      <div style={{ background: '#0b0b0b', color: '#fff', padding: 12, borderRadius: 14, marginBottom: 12 }}>
+      <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 14, marginBottom: 12 }}>
         <div style={{ fontWeight: 900, marginBottom: 6 }}>位置情報</div>
         {geoStatus ? (
           <div style={{ display: 'grid', gap: 4, fontSize: 14 }}>

@@ -65,8 +65,8 @@ export default function TripDetail() {
           <div style={{ opacity: 0.8, fontSize: 12 }}>tripId: {tripId}</div>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <Link to="/" style={{ color: '#93c5fd' }}>ホーム</Link>
-          <Link to="/history" style={{ color: '#93c5fd' }}>履歴</Link>
+          <Link to="/" className="pill-link">ホーム</Link>
+          <Link to="/history" className="pill-link">履歴</Link>
           <button onClick={load} style={{ padding: '8px 10px', borderRadius: 12 }}>再読込</button>
         </div>
       </div>
@@ -99,7 +99,7 @@ export default function TripDetail() {
             </button>
           </div>
           <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
               <div style={{ fontWeight: 900, marginBottom: 6 }}>距離サマリー</div>
               <div style={{ opacity: 0.9 }}>
                 開始ODO: {vm.odoStart} km / 終了ODO: {vm.odoEnd ?? '-'} km
@@ -121,7 +121,7 @@ export default function TripDetail() {
             )}
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
               <div style={{ fontWeight: 900, marginBottom: 8 }}>区間距離一覧（分割休息も含む）</div>
               <div style={{ display: 'grid', gap: 6 }}>
                 {vm.segments.map(seg => (
@@ -135,7 +135,7 @@ export default function TripDetail() {
                 ))}
               </div>
             </div>
-            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
               <div style={{ fontWeight: 900, marginBottom: 8 }}>日別運行（休息終了で「はい」を押した分だけ確定）</div>
               <div style={{ display: 'grid', gap: 6 }}>
                 {vm.dayRuns.map(day => (
@@ -149,7 +149,7 @@ export default function TripDetail() {
                 ))}
               </div>
             </div>
-            <div style={{ background: '#111', color: '#fff', padding: 12, borderRadius: 16 }}>
+            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
               <div style={{ fontWeight: 900, marginBottom: 8 }}>イベント一覧</div>
               <div style={{ display: 'grid', gap: 6 }}>
                 {events.map((ev, idx) => {

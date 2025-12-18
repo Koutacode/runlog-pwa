@@ -61,7 +61,7 @@ export default function HistoryScreen() {
     <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 20, fontWeight: 900 }}>履歴</div>
-        <Link to="/" style={{ color: '#93c5fd' }}>ホーム</Link>
+        <Link to="/" className="pill-link">ホーム</Link>
       </div>
       {err && <div style={{ background: '#7f1d1d', color: '#fff', padding: 12, borderRadius: 12 }}>{err}</div>}
       <div style={{ display: 'grid', gap: 8 }}>
@@ -69,7 +69,8 @@ export default function HistoryScreen() {
           <Link
             key={r.tripId}
             to={`/trip/${r.tripId}`}
-            style={{ textDecoration: 'none', color: '#fff', background: '#111', padding: 12, borderRadius: 16 }}
+            className="card"
+            style={{ textDecoration: 'none', color: '#fff', padding: 12, borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
               <div>
