@@ -45,8 +45,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        clientsClaim: true,
-        skipWaiting: true,
+        // Manual updateフロー用に waiting させる。PwaUpdater が onNeedRefresh で案内。
+        clientsClaim: false,
+        skipWaiting: false,
         cleanupOutdatedCaches: true,
         navigateFallback: `${basePath}index.html`,
       },
