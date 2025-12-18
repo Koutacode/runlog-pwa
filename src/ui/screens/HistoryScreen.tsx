@@ -14,6 +14,24 @@ function fmtLocal(ts?: string) {
   }).format(d);
 }
 
+function diffMinutes(start?: string, end?: string) {
+  if (!start) return undefined;
+  const s = Date.parse(start);
+  const e = end ? Date.parse(end) : Date.now();
+  if (Number.isNaN(s) || Number.isNaN(e)) return undefined;
+  const diff = Math.max(0, Math.floor((e - s) / 60000));
+  return diff;
+}
+
+function fmtDuration(mins?: number) {
+  if (mins == null) return '-';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}分`;
+  if (m === 0) return `${h}時間`;
+  return `${h}時間${m}分`;
+}
+
 export default function HistoryScreen() {
   const [rows, setRows] = useState<TripSummary[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -45,8 +63,11 @@ export default function HistoryScreen() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
               <div>
-                <div style={{ fontWeight: 900 }}>
+                <div style={{ fontWeight: 900, lineHeight: 1.4 }}>
                   {r.status === 'active' ? '運行中' : '運行終了'} / {fmtLocal(r.startTs)} → {fmtLocal(r.endTs)}
+                  <div style={{ fontSize: 12, opacity: 0.85 }}>
+                    {r.endTs ? '所要' : '経過'}: {fmtDuration(diffMinutes(r.startTs, r.endTs))}
+                  </div>
                 </div>
                 <div style={{ opacity: 0.85, fontSize: 12 }}>
                   ODO: {r.odoStart} → {r.odoEnd ?? '-'} / 総距離: {r.totalKm ?? '-'} km / 最終区間: {r.lastLegKm ?? '-'} km
