@@ -71,9 +71,10 @@ export default function OdoDialog(props: OdoDialogProps) {
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
-              type="number"
+              type="text"
               inputMode="none"
               readOnly
+              onFocus={e => e.currentTarget.blur()}
               placeholder="オドメーター（km）"
               value={value}
               style={{
