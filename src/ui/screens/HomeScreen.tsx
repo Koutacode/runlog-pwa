@@ -24,9 +24,11 @@ import {
   addBoarding,
   startExpressway,
   endExpressway,
+  updateExpresswayResolved,
   backfillMissingAddresses,
 } from '../../db/repositories';
 import type { AppEvent } from '../../domain/types';
+import { resolveNearestIC } from '../../services/icResolver';
 
 function fmtDuration(ms: number) {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
@@ -653,7 +655,19 @@ export default function HomeScreen() {
             onClick={async () => {
               try {
                 const geo = await getGeo();
-                await startExpressway({ tripId, geo });
+                const { eventId } = await startExpressway({ tripId, geo });
+                // 即時にIC名を取得して表示を早める（オンライン時のみ）
+                if (navigator.onLine && geo) {
+                  const result = await resolveNearestIC(geo.lat, geo.lng);
+                  if (result) {
+                    await updateExpresswayResolved({
+                      eventId,
+                      status: 'resolved',
+                      icName: result.icName,
+                      icDistanceM: result.distanceM,
+                    });
+                  }
+                }
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '高速道路の記録に失敗しました');
