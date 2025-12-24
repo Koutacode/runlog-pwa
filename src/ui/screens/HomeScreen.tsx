@@ -257,6 +257,7 @@ export default function HomeScreen() {
       } else if (el.webkitRequestFullscreen) {
         el.webkitRequestFullscreen();
       }
+      fullscreenAttempted.current = true;
     } catch (e: any) {
       setGeoError(e?.message ?? '全画面表示に失敗しました');
     }
@@ -271,6 +272,13 @@ export default function HomeScreen() {
       }
     } catch {
       // ignore
+    }
+  }
+
+  function ensureFullscreen() {
+    if (!fullscreenSupported) return;
+    if (!fullscreenOn) {
+      void enterFullscreen();
     }
   }
 
@@ -411,6 +419,7 @@ export default function HomeScreen() {
               onClick={async () => {
                 setHighSpeedPrompt(null);
                 try {
+                  ensureFullscreen();
                   const geo = await getGeo();
                   const { eventId } = await startExpressway({ tripId: tripId ?? '', geo });
                   if (navigator.onLine && geo) {
@@ -444,7 +453,7 @@ export default function HomeScreen() {
         <InstallButton />
       </div>
       <OdoDialog
-        open={odoDialog?.kind === 'trip_start'}
+       open={odoDialog?.kind === 'trip_start'}
         title="運行開始"
         description="運行開始時のオドメーター（km）を入力してください"
         onCancel={() => setOdoDialog(null)}
@@ -452,6 +461,7 @@ export default function HomeScreen() {
           setOdoDialog(null);
           setLoading(true);
           try {
+            ensureFullscreen();
             const geo = await getGeo();
             const { tripId: newTripId } = await startTrip({ odoKm, geo });
             setTripId(newTripId);
@@ -486,13 +496,13 @@ export default function HomeScreen() {
     : null;
   return (
     <div style={{ padding: 16, maxWidth: 720, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 900 }}>運行中</div>
-          <div style={{ opacity: 0.85, fontSize: 13 }}>
-            開始: {tripStart?.ts ? new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(tripStart.ts)) : '-'} / 開始ODO: {tripStartOdo ?? '-'} km
-          </div>
-        </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 900 }}>運行中</div>
+              <div style={{ opacity: 0.85, fontSize: 13 }}>
+                開始: {tripStart?.ts ? new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(tripStart.ts)) : '-'} / 開始ODO: {tripStartOdo ?? '-'} km
+              </div>
+            </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <Link to={`/trip/${tripId}`} className="pill-link">
             詳細
@@ -621,6 +631,7 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 await endLoad({ tripId, geo });
                 await refresh();
@@ -635,6 +646,7 @@ export default function HomeScreen() {
             disabled={!canStartLoad}
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 await startLoad({ tripId, geo });
                 await refresh();
@@ -651,6 +663,7 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 await endUnload({ tripId, geo });
                 await refresh();
@@ -665,6 +678,7 @@ export default function HomeScreen() {
             disabled={!canStartUnload}
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 await startUnload({ tripId, geo });
                 await refresh();
@@ -681,6 +695,7 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 await endBreak({ tripId, geo });
                 cancelBreakReminder();
@@ -696,6 +711,7 @@ export default function HomeScreen() {
             disabled={!canStartBreak}
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 await startBreak({ tripId, geo });
                 await refresh();
@@ -724,6 +740,7 @@ export default function HomeScreen() {
             variant="neutral"
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 await endExpressway({ tripId, geo });
                 await refresh();
@@ -737,6 +754,7 @@ export default function HomeScreen() {
             label="高速道路開始"
             onClick={async () => {
               try {
+                ensureFullscreen();
                 const geo = await getGeo();
                 const { eventId } = await startExpressway({ tripId, geo });
                 // 即時にIC名を取得して表示を早める（オンライン時のみ）
@@ -763,6 +781,7 @@ export default function HomeScreen() {
           label="乗船"
           onClick={async () => {
             try {
+              ensureFullscreen();
               const geo = await getGeo();
               await addBoarding({ tripId, geo });
               await refresh();
@@ -797,6 +816,7 @@ export default function HomeScreen() {
           setOdoDialog(null);
           setLoading(true);
           try {
+            ensureFullscreen();
             const geo = await getGeo();
             // 直近チェックポイント（運行開始 or 直前の休息開始）との差を計算して通知する
             const lastCheckpointOdo = (() => {
@@ -832,6 +852,7 @@ export default function HomeScreen() {
           if (!openRestSessionId) return;
           setLoading(true);
           try {
+            ensureFullscreen();
             const geo = await getGeo();
             await endRest({ tripId, restSessionId: openRestSessionId, dayClose: true, geo });
             await refresh();
@@ -846,6 +867,7 @@ export default function HomeScreen() {
           if (!openRestSessionId) return;
           setLoading(true);
           try {
+            ensureFullscreen();
             const geo = await getGeo();
             await endRest({ tripId, restSessionId: openRestSessionId, dayClose: false, geo });
             await refresh();
@@ -866,6 +888,7 @@ export default function HomeScreen() {
             setOdoDialog(null);
             setLoading(true);
             try {
+              ensureFullscreen();
               const geo = await getGeo();
               const { event } = await endTrip({ tripId, odoEndKm, geo });
               alert(
