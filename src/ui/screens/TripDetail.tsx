@@ -272,16 +272,16 @@ export default function TripDetail() {
     return <div style={{ padding: 16 }}>tripId が不正です</div>;
   }
   return (
-    <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+    <div style={{ padding: 18, maxWidth: 960, margin: '0 auto', fontSize: 15, lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 900 }}>運行詳細</div>
-          <div style={{ opacity: 0.8, fontSize: 12 }}>tripId: {tripId}</div>
+          <div style={{ fontSize: 22, fontWeight: 900 }}>運行詳細</div>
+          <div style={{ opacity: 0.8, fontSize: 13 }}>tripId: {tripId}</div>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Link to="/" className="pill-link">ホーム</Link>
           <Link to="/history" className="pill-link">履歴</Link>
-          <button onClick={load} style={{ padding: '8px 10px', borderRadius: 12 }}>再読込</button>
+          <button onClick={load} style={{ padding: '10px 12px', borderRadius: 12, fontWeight: 700 }}>再読込</button>
         </div>
       </div>
       {err && (
@@ -290,9 +290,9 @@ export default function TripDetail() {
       {!vm && !err && <div>読み込み中…</div>}
       {vm && (
         <>
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 14 }}>
             <button
-              style={{ padding: '8px 12px', borderRadius: 12, background: '#7f1d1d', color: '#fff', fontWeight: 800 }}
+              style={{ padding: '10px 14px', borderRadius: 14, background: '#7f1d1d', color: '#fff', fontWeight: 800, fontSize: 14 }}
               onClick={async () => {
                 if (!tripId) return;
                 const ok = window.confirm('この運行の履歴をすべて削除します。よろしいですか？');
@@ -312,21 +312,21 @@ export default function TripDetail() {
               {deleting ? '削除中…' : 'この運行を削除'}
             </button>
           </div>
-          <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 6 }}>距離サマリー</div>
-              <div style={{ opacity: 0.9 }}>
+          <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+            <div className="card" style={{ color: '#fff', padding: 16, borderRadius: 18 }}>
+              <div style={{ fontWeight: 900, marginBottom: 8, fontSize: 17 }}>距離サマリー</div>
+              <div style={{ opacity: 0.92, fontSize: 15 }}>
                 開始ODO: {vm.odoStart} km / 終了ODO: {vm.odoEnd ?? '-'} km
               </div>
-              <div style={{ marginTop: 8 }}>
+              <div style={{ marginTop: 10, display: 'grid', gap: 6, fontSize: 15 }}>
                 <div>総距離: {vm.totalKm ?? '-'} km</div>
                 <div>最終区間: {vm.lastLegKm ?? '-'} km</div>
               </div>
             </div>
             {!vm.validation.ok && (
-              <div style={{ background: '#7c2d12', color: '#fff', padding: 12, borderRadius: 16 }}>
-                <div style={{ fontWeight: 900, marginBottom: 6 }}>整合性チェック</div>
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <div style={{ background: '#7c2d12', color: '#fff', padding: 14, borderRadius: 16, fontSize: 15 }}>
+                <div style={{ fontWeight: 900, marginBottom: 8 }}>整合性チェック</div>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
                   {vm.validation.errors.map((e, i) => (
                     <li key={i}>{e}</li>
                   ))}
@@ -334,38 +334,38 @@ export default function TripDetail() {
               </div>
             )}
           </div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 8 }}>区間距離一覧（分割休息も含む）</div>
-              <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div className="card" style={{ color: '#fff', padding: 16, borderRadius: 18 }}>
+              <div style={{ fontWeight: 900, marginBottom: 10, fontSize: 17 }}>区間距離一覧（分割休息も含む）</div>
+              <div style={{ display: 'grid', gap: 8 }}>
                 {vm.segments.map(seg => (
-                  <div key={seg.index} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '8px 10px', borderRadius: 12, background: '#0b0b0b' }}>
+                  <div key={seg.index} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '10px 12px', borderRadius: 14, background: '#0b0b0b' }}>
                     <div style={{ opacity: 0.95 }}>
-                      <div style={{ fontWeight: 800 }}>{seg.fromLabel} → {seg.toLabel}</div>
-                      <div style={{ opacity: 0.8, fontSize: 12 }}>{fmtLocal(seg.fromTs)} → {fmtLocal(seg.toTs)}</div>
+                      <div style={{ fontWeight: 800, fontSize: 15 }}>{seg.fromLabel} → {seg.toLabel}</div>
+                      <div style={{ opacity: 0.82, fontSize: 12 }}>{fmtLocal(seg.fromTs)} → {fmtLocal(seg.toTs)}</div>
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: seg.valid ? '#fff' : '#fecaca' }}>{seg.km} km</div>
+                    <div style={{ fontSize: 19, fontWeight: 900, color: seg.valid ? '#fff' : '#fecaca' }}>{seg.km} km</div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 8 }}>日別運行（休息終了で「はい」を押した分だけ確定）</div>
-              <div style={{ display: 'grid', gap: 6 }}>
+            <div className="card" style={{ color: '#fff', padding: 16, borderRadius: 18 }}>
+              <div style={{ fontWeight: 900, marginBottom: 10, fontSize: 17 }}>日別運行（休息終了で「はい」を押した分だけ確定）</div>
+              <div style={{ display: 'grid', gap: 8 }}>
                 {vm.dayRuns.map(day => (
-                  <div key={day.dayIndex} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '8px 10px', borderRadius: 12, background: '#0b0b0b' }}>
+                  <div key={day.dayIndex} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, padding: '10px 12px', borderRadius: 14, background: '#0b0b0b' }}>
                     <div>
-                      <div style={{ fontWeight: 900 }}>{day.dayIndex}日目 {day.status === 'pending' ? '（締め待ち）' : ''}</div>
-                      <div style={{ opacity: 0.8, fontSize: 12 }}>{day.fromLabel} → {day.toLabel}</div>
+                      <div style={{ fontWeight: 900, fontSize: 15 }}>{day.dayIndex}日目 {day.status === 'pending' ? '（締め待ち）' : ''}</div>
+                      <div style={{ opacity: 0.82, fontSize: 12 }}>{day.fromLabel} → {day.toLabel}</div>
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 900 }}>{day.km} km</div>
+                    <div style={{ fontSize: 19, fontWeight: 900 }}>{day.km} km</div>
                   </div>
                 ))}
               </div>
             </div>
-              <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 16 }}>
-              <div style={{ fontWeight: 900, marginBottom: 8 }}>イベント一覧</div>
-              <div style={{ display: 'grid', gap: 6 }}>
+            <div className="card" style={{ color: '#fff', padding: 16, borderRadius: 18 }}>
+              <div style={{ fontWeight: 900, marginBottom: 10, fontSize: 17 }}>イベント一覧</div>
+              <div style={{ display: 'grid', gap: 10 }}>
                 {events.map((ev, idx) => {
                   const t = timeline[idx];
                   const isEditing = editing?.id === ev.id;
@@ -374,11 +374,11 @@ export default function TripDetail() {
                   const geo = (ev as any).geo as any;
                   const title = label(ev);
                   return (
-                    <div key={ev.id} style={{ padding: '8px 10px', borderRadius: 12, background: '#0b0b0b' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+                    <div key={ev.id} style={{ padding: '12px 12px', borderRadius: 14, background: '#0b0b0b' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                         <div>
-                          <div style={{ fontWeight: 900 }}>{t?.title ?? title}</div>
-                          <div style={{ opacity: 0.8, fontSize: 12 }}>
+                          <div style={{ fontWeight: 900, fontSize: 15 }}>{t?.title ?? title}</div>
+                          <div style={{ opacity: 0.85, fontSize: 13 }}>
                             {isEditing ? (
                               <input
                                 type="datetime-local"
@@ -397,13 +397,13 @@ export default function TripDetail() {
                               <button
                                 onClick={handleSaveTime}
                                 disabled={saving || busy}
-                                style={{ padding: '6px 8px', borderRadius: 8 }}
+                                style={{ padding: '8px 10px', borderRadius: 10, fontWeight: 700 }}
                               >
                                 {saving ? '保存中…' : '保存'}
                               </button>
                               <button
                                 onClick={() => setEditing(null)}
-                                style={{ padding: '6px 8px', borderRadius: 8 }}
+                                style={{ padding: '8px 10px', borderRadius: 10 }}
                               >
                                 キャンセル
                               </button>
@@ -411,7 +411,7 @@ export default function TripDetail() {
                           ) : (
                             <button
                               onClick={() => setEditing({ id: ev.id, value: toLocalInputValue(ev.ts) })}
-                              style={{ padding: '6px 8px', borderRadius: 8 }}
+                              style={{ padding: '8px 10px', borderRadius: 10 }}
                             >
                               時刻編集
                             </button>
@@ -419,15 +419,15 @@ export default function TripDetail() {
                           <button
                             onClick={() => void handleDeleteEvent(ev.id)}
                             disabled={busy}
-                            style={{ padding: '6px 8px', borderRadius: 8, background: '#7f1d1d', color: '#fff' }}
+                            style={{ padding: '8px 10px', borderRadius: 10, background: '#7f1d1d', color: '#fff', fontWeight: 700 }}
                           >
                             {busy ? '削除中…' : '削除'}
                           </button>
                         </div>
                       </div>
-                      {t?.detail && <div style={{ opacity: 0.85, fontSize: 12, marginTop: 4 }}>{t.detail}</div>}
-                      <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                        <div style={{ fontSize: 12, opacity: 0.85 }}>
+                      {t?.detail && <div style={{ opacity: 0.9, fontSize: 13, marginTop: 6 }}>{t.detail}</div>}
+                      <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ fontSize: 13, opacity: 0.9 }}>
                           地点: {ev.address ?? '未取得'}
                           {geo ? (
                             <span style={{ marginLeft: 6, opacity: 0.75 }}>
@@ -448,11 +448,11 @@ export default function TripDetail() {
                             <button
                               onClick={handleSaveAddress}
                               disabled={saving || busy}
-                              style={{ padding: '6px 8px', borderRadius: 8 }}
+                              style={{ padding: '8px 10px', borderRadius: 10, fontWeight: 700 }}
                             >
                               {saving ? '保存中…' : '住所保存'}
                             </button>
-                            <button onClick={() => setAddressEditing(null)} style={{ padding: '6px 8px', borderRadius: 8 }}>
+                            <button onClick={() => setAddressEditing(null)} style={{ padding: '8px 10px', borderRadius: 10 }}>
                               キャンセル
                             </button>
                           </div>
@@ -460,14 +460,14 @@ export default function TripDetail() {
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <button
                               onClick={() => setAddressEditing({ id: ev.id, value: ev.address ?? '' })}
-                              style={{ padding: '6px 8px', borderRadius: 8 }}
+                              style={{ padding: '8px 10px', borderRadius: 10 }}
                             >
                               住所編集
                             </button>
                             <button
                               onClick={() => void handleRefreshAddress(ev.id)}
                               disabled={!geo || busy}
-                              style={{ padding: '6px 8px', borderRadius: 8, opacity: geo ? 1 : 0.5 }}
+                              style={{ padding: '8px 10px', borderRadius: 10, opacity: geo ? 1 : 0.5 }}
                             >
                               {busy ? '再取得中…' : '位置から再取得'}
                             </button>

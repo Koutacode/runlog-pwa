@@ -91,6 +91,8 @@ export default function HomeScreen() {
   const [wakeLockOn, setWakeLockOn] = useState(false);
   const [wakeLockAvailable, setWakeLockAvailable] = useState(false);
   const [wakeLockError, setWakeLockError] = useState<string | null>(null);
+  const [fullscreenOn, setFullscreenOn] = useState(false);
+  const [fullscreenSupported, setFullscreenSupported] = useState(false);
   const breakReminderTimer = useRef<number | null>(null);
 
   const openRestSessionId = useMemo(() => getOpenRestSessionId(events), [events]);
@@ -175,7 +177,49 @@ export default function HomeScreen() {
   useEffect(() => {
     refresh();
     setWakeLockAvailable(isWakeLockSupported());
+    setFullscreenSupported(
+      typeof document !== 'undefined' &&
+        !!(document.fullscreenEnabled || (document as any).webkitFullscreenEnabled),
+    );
   }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      const fs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+      setFullscreenOn(fs);
+    };
+    document.addEventListener('fullscreenchange', handler);
+    document.addEventListener('webkitfullscreenchange', handler as any);
+    return () => {
+      document.removeEventListener('fullscreenchange', handler);
+      document.removeEventListener('webkitfullscreenchange', handler as any);
+    };
+  }, []);
+
+  async function enterFullscreen() {
+    try {
+      const el = document.documentElement as any;
+      if (el.requestFullscreen) {
+        await el.requestFullscreen();
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      }
+    } catch (e: any) {
+      setGeoError(e?.message ?? '全画面表示に失敗しました');
+    }
+  }
+
+  async function exitFullscreen() {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        await (document as any).webkitExitFullscreen();
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   async function captureGeoOnce() {
     try {
@@ -275,11 +319,28 @@ export default function HomeScreen() {
   if (!tripId) {
     return (
       <div style={{ padding: 16, maxWidth: 720, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 10, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 20, fontWeight: 900 }}>RunLog</div>
-        <Link to="/history" className="pill-link">
-          履歴
-        </Link>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {fullscreenSupported && (
+            <button
+              className="pill-link"
+              style={{ background: fullscreenOn ? '#22c55e' : undefined, color: fullscreenOn ? '#fff' : undefined }}
+              onClick={() => {
+                if (fullscreenOn) {
+                  void exitFullscreen();
+                } else {
+                  void enterFullscreen();
+                }
+              }}
+            >
+              全画面
+            </button>
+          )}
+          <Link to="/history" className="pill-link">
+            履歴
+          </Link>
+        </div>
       </div>
       <div style={{ display: 'grid', gap: 10 }}>
         <BigButton
@@ -346,6 +407,21 @@ export default function HomeScreen() {
           <Link to="/history" className="pill-link">
             履歴
           </Link>
+          {fullscreenSupported && (
+            <button
+              className="pill-link"
+              style={{ background: fullscreenOn ? '#22c55e' : undefined, color: fullscreenOn ? '#fff' : undefined }}
+              onClick={() => {
+                if (fullscreenOn) {
+                  void exitFullscreen();
+                } else {
+                  void enterFullscreen();
+                }
+              }}
+            >
+              全画面
+            </button>
+          )}
           {wakeLockAvailable && (
             <button
               className="pill-link"
