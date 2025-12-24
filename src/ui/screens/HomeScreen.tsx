@@ -448,7 +448,10 @@ export default function HomeScreen() {
         <BigButton
           label={loading ? '読み込み中…' : '運行開始'}
           disabled={loading}
-          onClick={() => setOdoDialog({ kind: 'trip_start' })}
+          onClick={() => {
+            ensureFullscreen();
+            setOdoDialog({ kind: 'trip_start' });
+          }}
         />
         <InstallButton />
       </div>
@@ -728,11 +731,20 @@ export default function HomeScreen() {
           <BigButton
             label="休息開始（オド入力）"
             disabled={!canStartRest}
-            onClick={() => setOdoDialog({ kind: 'rest_start' })}
+            onClick={() => {
+              ensureFullscreen();
+              setOdoDialog({ kind: 'rest_start' });
+            }}
           />
         )}
         {/* Fuel (給油) */}
-        <BigButton label="給油（数量入力）" onClick={() => setFuelOpen(true)} />
+        <BigButton
+          label="給油（数量入力）"
+          onClick={() => {
+            ensureFullscreen();
+            setFuelOpen(true);
+          }}
+        />
         {/* Expressway (高速道路) */}
         {expresswayActive ? (
           <BigButton
