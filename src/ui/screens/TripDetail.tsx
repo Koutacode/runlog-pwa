@@ -41,6 +41,10 @@ function label(ev: AppEvent) {
       return '積込開始';
     case 'load_end':
       return '積込終了';
+    case 'unload_start':
+      return '荷卸開始';
+    case 'unload_end':
+      return '荷卸終了';
     case 'refuel':
       return '給油';
     case 'expressway':
@@ -83,6 +87,7 @@ function findTogglePair(events: AppEvent[], ev: AppEvent) {
     { start: 'rest_start', end: 'rest_end', key: 'restSessionId', label: '休息' },
     { start: 'break_start', end: 'break_end', key: 'breakSessionId', label: '休憩' },
     { start: 'load_start', end: 'load_end', key: 'loadSessionId', label: '積込' },
+    { start: 'unload_start', end: 'unload_end', key: 'unloadSessionId', label: '荷卸' },
     { start: 'expressway_start', end: 'expressway_end', key: 'expresswaySessionId', label: '高速道路' },
   ];
   const def = defs.find(d => d.start === ev.type || d.end === ev.type);

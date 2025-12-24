@@ -7,6 +7,8 @@ export type EventType =
   | 'break_end'
   | 'load_start'
   | 'load_end'
+  | 'unload_start'
+  | 'unload_end'
   | 'refuel'
   | 'boarding'
   | 'expressway'

@@ -337,6 +337,37 @@ export async function endLoad(params: { tripId: string; geo?: Geo; address?: str
   await addEvent(e);
 }
 
+// Unload (荷卸) operations
+export async function startUnload(params: { tripId: string; geo?: Geo; address?: string }) {
+  const events = await getTripEventsCached(params.tripId);
+  const open = findOpenToggleSessionId(events, 'unload_start', 'unload_end', 'unloadSessionId');
+  if (open) throw new Error('荷卸がすでに開始されています（終了してください）');
+  const unloadSessionId = uuid();
+  const e = baseEvent({
+    tripId: params.tripId,
+    type: 'unload_start',
+    geo: params.geo,
+    address: params.address,
+    extras: { unloadSessionId },
+  });
+  await addEvent(e);
+  return { unloadSessionId };
+}
+
+export async function endUnload(params: { tripId: string; geo?: Geo; address?: string }) {
+  const events = await getTripEventsCached(params.tripId);
+  const open = findOpenToggleSessionId(events, 'unload_start', 'unload_end', 'unloadSessionId');
+  if (!open) throw new Error('荷卸が開始されていません');
+  const e = baseEvent({
+    tripId: params.tripId,
+    type: 'unload_end',
+    geo: params.geo,
+    address: params.address,
+    extras: open === '__legacy__' ? undefined : { unloadSessionId: open },
+  });
+  await addEvent(e);
+}
+
 // Break (休憩) operations
 export async function startBreak(params: { tripId: string; geo?: Geo; address?: string }) {
   const events = await getTripEventsCached(params.tripId);

@@ -16,6 +16,8 @@ import {
   endRest,
   startLoad,
   endLoad,
+  startUnload,
+  endUnload,
   startBreak,
   endBreak,
   addRefuel,
@@ -93,6 +95,10 @@ export default function HomeScreen() {
 
   const openRestSessionId = useMemo(() => getOpenRestSessionId(events), [events]);
   const openLoadSessionId = useMemo(() => getOpenToggle(events, 'load_start', 'load_end', 'loadSessionId'), [events]);
+  const openUnloadSessionId = useMemo(
+    () => getOpenToggle(events, 'unload_start', 'unload_end', 'unloadSessionId'),
+    [events],
+  );
   const openBreakSessionId = useMemo(() => getOpenToggle(events, 'break_start', 'break_end', 'breakSessionId'), [events]);
   const openExpresswaySessionId = useMemo(
     () => getOpenToggle(events, 'expressway_start', 'expressway_end', 'expresswaySessionId'),
@@ -101,11 +107,13 @@ export default function HomeScreen() {
 
   const restActive = !!openRestSessionId;
   const loadActive = !!openLoadSessionId;
+  const unloadActive = !!openUnloadSessionId;
   const breakActive = !!openBreakSessionId;
   const expresswayActive = !!openExpresswaySessionId;
-  const canStartRest = !loadActive && !breakActive && !restActive;
-  const canStartLoad = !restActive && !breakActive && !loadActive;
-  const canStartBreak = !restActive && !loadActive && !breakActive;
+  const canStartRest = !loadActive && !breakActive && !restActive && !unloadActive;
+  const canStartLoad = !restActive && !breakActive && !loadActive && !unloadActive;
+  const canStartUnload = !restActive && !breakActive && !unloadActive && !loadActive;
+  const canStartBreak = !restActive && !loadActive && !breakActive && !unloadActive;
   const nextDayIndex = useMemo(() => getNextDayIndex(events), [events]);
 
   // Fill missing addresses later whenオンラインになった際に補完する
@@ -316,6 +324,9 @@ export default function HomeScreen() {
   const loadStart = openLoadSessionId
     ? (events.find(e => e.type === 'load_start' && (e as any).extras?.loadSessionId === openLoadSessionId) as any)
     : null;
+  const unloadStart = openUnloadSessionId
+    ? (events.find(e => e.type === 'unload_start' && (e as any).extras?.unloadSessionId === openUnloadSessionId) as any)
+    : null;
   const breakStart = openBreakSessionId
     ? (events.find(e => e.type === 'break_start' && (e as any).extras?.breakSessionId === openBreakSessionId) as any)
     : null;
@@ -379,13 +390,19 @@ export default function HomeScreen() {
               <span>{fmtDuration(now - new Date(loadStart.ts).getTime())}</span>
             </div>
           )}
+          {unloadStart && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+              <span>荷卸</span>
+              <span>{fmtDuration(now - new Date(unloadStart.ts).getTime())}</span>
+            </div>
+          )}
           {breakStart && (
             <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
               <span>休憩</span>
               <span>{fmtDuration(now - new Date(breakStart.ts).getTime())}</span>
             </div>
           )}
-          {!restStart && !loadStart && !breakStart && (
+          {!restStart && !loadStart && !unloadStart && !breakStart && (
             <div style={{ opacity: 0.8 }}>他の進行中イベントはありません</div>
           )}
         </div>
@@ -449,6 +466,36 @@ export default function HomeScreen() {
                 await refresh();
               } catch (e: any) {
                 alert(e?.message ?? '積込開始に失敗しました');
+              }
+            }}
+          />
+        )}
+        {/* Unload (荷卸) */}
+        {unloadActive ? (
+          <BigButton
+            label="荷卸終了"
+            variant="neutral"
+            onClick={async () => {
+              try {
+                const geo = await getGeo();
+                await endUnload({ tripId, geo });
+                await refresh();
+              } catch (e: any) {
+                alert(e?.message ?? '荷卸終了に失敗しました');
+              }
+            }}
+          />
+        ) : (
+          <BigButton
+            label="荷卸開始"
+            disabled={!canStartUnload}
+            onClick={async () => {
+              try {
+                const geo = await getGeo();
+                await startUnload({ tripId, geo });
+                await refresh();
+              } catch (e: any) {
+                alert(e?.message ?? '荷卸開始に失敗しました');
               }
             }}
           />
