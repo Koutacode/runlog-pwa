@@ -95,8 +95,11 @@ export default function HomeScreen() {
   const [wakeLockError, setWakeLockError] = useState<string | null>(null);
   const [fullscreenOn, setFullscreenOn] = useState(false);
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
+  const [highSpeedPrompt, setHighSpeedPrompt] = useState<number | null>(null);
+  const lastHighSpeedPromptAt = useRef<number | null>(null);
   const breakReminderTimer = useRef<number | null>(null);
   const fullscreenAttempted = useRef(false);
+  const speedWatchId = useRef<number | null>(null);
 
   const openRestSessionId = useMemo(() => getOpenRestSessionId(events), [events]);
   const openLoadSessionId = useMemo(() => getOpenToggle(events, 'load_start', 'load_end', 'loadSessionId'), [events]);
@@ -120,6 +123,9 @@ export default function HomeScreen() {
   const canStartUnload = !restActive && !breakActive && !unloadActive && !loadActive;
   const canStartBreak = !restActive && !loadActive && !breakActive && !unloadActive;
   const nextDayIndex = useMemo(() => getNextDayIndex(events), [events]);
+  const expresswayStart = openExpresswaySessionId
+    ? (events.find(e => e.type === 'expressway_start' && (e as any).extras?.expresswaySessionId === openExpresswaySessionId) as any)
+    : null;
 
   // Fill missing addresses later whenオンラインになった際に補完する
   async function backfillAddresses(active: string | null) {
@@ -176,6 +182,38 @@ export default function HomeScreen() {
     window.addEventListener('online', handler);
     return () => window.removeEventListener('online', handler);
   }, [tripId]);
+
+  // Speed watcher for高速リマインド（80km/h超で未開始なら通知）
+  useEffect(() => {
+    if (!tripId || !navigator.geolocation) return;
+    if (speedWatchId.current != null) {
+      navigator.geolocation.clearWatch(speedWatchId.current);
+      speedWatchId.current = null;
+    }
+    const id = navigator.geolocation.watchPosition(
+      pos => {
+        const spd = pos.coords.speed; // m/s
+        if (spd == null || Number.isNaN(spd)) return;
+        const kmh = spd * 3.6;
+        if (kmh >= 80 && !expresswayActive) {
+          const last = lastHighSpeedPromptAt.current ?? 0;
+          if (Date.now() - last > 5 * 60 * 1000) {
+            setHighSpeedPrompt(Math.round(kmh));
+            lastHighSpeedPromptAt.current = Date.now();
+          }
+        }
+      },
+      () => {
+        // ignore errors
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 },
+    );
+    speedWatchId.current = id;
+    return () => {
+      if (id != null) navigator.geolocation.clearWatch(id);
+      speedWatchId.current = null;
+    };
+  }, [tripId, expresswayActive]);
 
   useEffect(() => {
     refresh();
@@ -357,6 +395,46 @@ export default function HomeScreen() {
           </Link>
         </div>
       </div>
+      {highSpeedPrompt && (
+        <div className="card" style={{ marginTop: 8, padding: 12, color: '#fff', borderRadius: 14, border: '1px solid #1e293b', background: '#0f172a' }}>
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>速度 {highSpeedPrompt}km/h 超</div>
+          <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 10 }}>高速道路開始を記録しますか？</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              style={{ flex: 1, padding: '10px 12px', borderRadius: 10 }}
+              onClick={() => setHighSpeedPrompt(null)}
+            >
+              閉じる
+            </button>
+            <button
+              style={{ flex: 1, padding: '10px 12px', borderRadius: 10, background: '#0ea5e9', color: '#fff', fontWeight: 800 }}
+              onClick={async () => {
+                setHighSpeedPrompt(null);
+                try {
+                  const geo = await getGeo();
+                  const { eventId } = await startExpressway({ tripId: tripId ?? '', geo });
+                  if (navigator.onLine && geo) {
+                    const result = await resolveNearestIC(geo.lat, geo.lng);
+                    if (result) {
+                      await updateExpresswayResolved({
+                        eventId,
+                        status: 'resolved',
+                        icName: result.icName,
+                        icDistanceM: result.distanceM,
+                      });
+                    }
+                  }
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '高速道路の記録に失敗しました');
+                }
+              }}
+            >
+              高速開始を記録
+            </button>
+          </div>
+        </div>
+      )}
       <div style={{ display: 'grid', gap: 10 }}>
         <BigButton
           label={loading ? '読み込み中…' : '運行開始'}
@@ -422,6 +500,11 @@ export default function HomeScreen() {
           <Link to="/history" className="pill-link">
             履歴
           </Link>
+          {expresswayActive && expresswayStart && (
+            <div style={{ padding: '8px 10px', borderRadius: 10, background: '#0ea5e9', color: '#fff', fontWeight: 800, fontSize: 12 }}>
+              高速中 {fmtDuration(now - new Date(expresswayStart.ts).getTime())}
+            </div>
+          )}
           {fullscreenSupported && (
             <button
               className="pill-link"
