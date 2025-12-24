@@ -94,6 +94,7 @@ export default function HomeScreen() {
   const [fullscreenOn, setFullscreenOn] = useState(false);
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
   const breakReminderTimer = useRef<number | null>(null);
+  const fullscreenAttempted = useRef(false);
 
   const openRestSessionId = useMemo(() => getOpenRestSessionId(events), [events]);
   const openLoadSessionId = useMemo(() => getOpenToggle(events, 'load_start', 'load_end', 'loadSessionId'), [events]);
@@ -195,6 +196,18 @@ export default function HomeScreen() {
       document.removeEventListener('webkitfullscreenchange', handler as any);
     };
   }, []);
+
+  // Try to enter fullscreen on firstユーザー操作（仕様上ジェスチャーが必要なため）
+  useEffect(() => {
+    if (!fullscreenSupported) return;
+    const handler = () => {
+      if (fullscreenAttempted.current) return;
+      fullscreenAttempted.current = true;
+      void enterFullscreen();
+    };
+    window.addEventListener('pointerdown', handler, { once: true, capture: true });
+    return () => window.removeEventListener('pointerdown', handler, true as any);
+  }, [fullscreenSupported]);
 
   async function enterFullscreen() {
     try {

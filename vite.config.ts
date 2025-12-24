@@ -22,7 +22,8 @@ export default defineConfig({
         id: basePath,
         start_url: basePath,
         scope: basePath,
-        display: 'standalone',
+        display: 'fullscreen',
+        display_override: ['fullscreen', 'standalone'],
         background_color: '#0b0b0b',
         theme_color: '#0b0b0b',
         icons: [
