@@ -271,6 +271,10 @@ export default function TripDetail() {
   if (!tripId) {
     return <div style={{ padding: 16 }}>tripId が不正です</div>;
   }
+  const timeline = events.map(ev => ({
+    title: label(ev),
+    detail: buildDetail(events, ev),
+  }));
   return (
     <div style={{ padding: 18, maxWidth: 960, margin: '0 auto', fontSize: 15, lineHeight: 1.5 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
