@@ -89,6 +89,46 @@ export async function updateEventTimestamp(eventId: string, ts: string) {
   await rebalanceDayCloseIndices(ev.tripId);
 }
 
+async function recomputeTripEndTotals(tripId: string) {
+  const events = await getEventsByTripId(tripId);
+  const start = events.find(e => e.type === 'trip_start') as TripStartEvent | undefined;
+  const end = [...events].reverse().find(e => e.type === 'trip_end') as TripEndEvent | undefined;
+  if (!start || !end) return;
+  const restStarts = events.filter(e => e.type === 'rest_start') as RestStartEvent[];
+  restStarts.sort((a, b) => a.ts.localeCompare(b.ts));
+  const lastRestStartOdo = restStarts.length > 0 ? restStarts[restStarts.length - 1].extras.odoKm : undefined;
+  const totals = computeTotals({
+    odoStart: start.extras.odoKm,
+    odoEnd: end.extras.odoKm,
+    lastRestStartOdo,
+  });
+  const extras = { ...(end as any).extras, totalKm: totals.totalKm, lastLegKm: totals.lastLegKm };
+  await db.events.update(end.id, { extras, syncStatus: 'pending' });
+}
+
+export async function updateEventOdo(eventId: string, odoKm: number) {
+  if (!Number.isFinite(odoKm) || odoKm <= 0) throw new Error('オドメーターが不正です');
+  const ev = await db.events.get(eventId);
+  if (!ev) throw new Error('イベントが見つかりません');
+  if (!['trip_start', 'rest_start', 'trip_end'].includes(ev.type)) {
+    throw new Error('このイベントではオドメーターを編集できません');
+  }
+  const extras = { ...(ev as any).extras, odoKm };
+  await db.events.update(eventId, { extras, syncStatus: 'pending' });
+  await recomputeTripEndTotals(ev.tripId);
+}
+
+export async function updateEventLiters(eventId: string, liters: number) {
+  if (!Number.isFinite(liters) || liters <= 0) throw new Error('給油量が不正です');
+  const ev = await db.events.get(eventId);
+  if (!ev) throw new Error('イベントが見つかりません');
+  if (ev.type !== 'refuel') {
+    throw new Error('給油イベントではありません');
+  }
+  const extras = { ...(ev as any).extras, liters };
+  await db.events.update(eventId, { extras, syncStatus: 'pending' });
+}
+
 export async function addEvent(event: AppEvent) {
   await db.events.put(event);
 }

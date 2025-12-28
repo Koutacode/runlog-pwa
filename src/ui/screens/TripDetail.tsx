@@ -6,6 +6,8 @@ import {
   getEventsByTripId,
   refreshEventAddressFromGeo,
   updateEventAddressManual,
+  updateEventLiters,
+  updateEventOdo,
   updateEventTimestamp,
 } from '../../db/repositories';
 import type { AppEvent } from '../../domain/types';
@@ -91,6 +93,16 @@ type GroupedItem = {
   places?: Array<{ label?: string; lat?: number; lng?: number; address?: string }>;
 };
 
+type NumericEditField = 'odoKm' | 'liters';
+
+type NumericEditDef = {
+  field: NumericEditField;
+  label: string;
+  value?: number;
+  min?: number;
+  step?: number;
+};
+
 type AiSharePayload = {
   tripId: string;
   generatedAt: string;
@@ -111,6 +123,23 @@ type AiSharePayload = {
   timeline: TripViewModel['timeline'];
   events: AppEvent[];
 };
+
+function getNumericEditDef(ev: AppEvent): NumericEditDef | null {
+  const extras = (ev as any).extras ?? {};
+  if (ev.type === 'trip_start') {
+    return { field: 'odoKm', label: '運行開始ODO (km)', value: extras.odoKm, min: 0, step: 1 };
+  }
+  if (ev.type === 'rest_start') {
+    return { field: 'odoKm', label: '休息開始ODO (km)', value: extras.odoKm, min: 0, step: 1 };
+  }
+  if (ev.type === 'trip_end') {
+    return { field: 'odoKm', label: '運行終了ODO (km)', value: extras.odoKm, min: 0, step: 1 };
+  }
+  if (ev.type === 'refuel') {
+    return { field: 'liters', label: '給油量 (L)', value: extras.liters, min: 0, step: 0.1 };
+  }
+  return null;
+}
 
 function buildGrouped(events: AppEvent[]): GroupedItem[] {
   const sorted = [...events].sort((a, b) => a.ts.localeCompare(b.ts));
@@ -295,6 +324,7 @@ export default function TripDetail() {
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; value: string } | null>(null);
   const [addressEditing, setAddressEditing] = useState<{ id: string; value: string } | null>(null);
+  const [numberEditing, setNumberEditing] = useState<{ id: string; field: NumericEditField; value: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -358,6 +388,44 @@ export default function TripDetail() {
       await load();
     } catch (e: any) {
       setErr(e?.message ?? '住所の保存に失敗しました');
+    } finally {
+      setSaving(false);
+      setWorkingId(null);
+    }
+  }
+
+  async function handleSaveNumber() {
+    if (!numberEditing) return;
+    const raw = numberEditing.value.trim();
+    if (!raw) {
+      alert('数値を入力してください');
+      return;
+    }
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      alert('数値の形式が不正です');
+      return;
+    }
+    if (numberEditing.field === 'odoKm' && parsed <= 0) {
+      alert('オドメーターが不正です');
+      return;
+    }
+    if (numberEditing.field === 'liters' && parsed <= 0) {
+      alert('給油量が不正です');
+      return;
+    }
+    setSaving(true);
+    setWorkingId(numberEditing.id);
+    try {
+      if (numberEditing.field === 'odoKm') {
+        await updateEventOdo(numberEditing.id, parsed);
+      } else {
+        await updateEventLiters(numberEditing.id, parsed);
+      }
+      setNumberEditing(null);
+      await load();
+    } catch (e: any) {
+      setErr(e?.message ?? '更新に失敗しました');
     } finally {
       setSaving(false);
       setWorkingId(null);
@@ -583,6 +651,113 @@ export default function TripDetail() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+            <div className="card" style={{ color: '#fff', padding: 18, borderRadius: 20 }}>
+              <div style={{ fontWeight: 900, marginBottom: 12, fontSize: 18 }}>イベント編集（時間/数値）</div>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {events.map(ev => {
+                  const numDef = getNumericEditDef(ev);
+                  const timeEditing = editing?.id === ev.id;
+                  const numberEditingActive =
+                    !!numDef && numberEditing?.id === ev.id && numberEditing.field === numDef.field;
+                  return (
+                    <div key={ev.id} style={{ padding: '14px 14px', borderRadius: 16, background: '#0b0b0b', display: 'grid', gap: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                        <div style={{ fontWeight: 900, fontSize: 17 }}>{label(ev)}</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>{ev.id.slice(0, 8)}</div>
+                      </div>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, opacity: 0.9 }}>時間</div>
+                        {timeEditing ? (
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <input
+                              type="datetime-local"
+                              value={editing.value}
+                              onChange={e => setEditing({ id: ev.id, value: e.target.value })}
+                              disabled={saving}
+                              style={{ height: 40, borderRadius: 10, border: '1px solid #374151', background: '#111827', color: '#fff', padding: '0 10px' }}
+                            />
+                            <button
+                              onClick={handleSaveTime}
+                              disabled={saving}
+                              style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 800 }}
+                            >
+                              保存
+                            </button>
+                            <button
+                              onClick={() => setEditing(null)}
+                              disabled={saving}
+                              style={{ padding: '8px 12px', borderRadius: 10 }}
+                            >
+                              取消
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                            <div>{fmtLocal(ev.ts)}</div>
+                            <button
+                              onClick={() => setEditing({ id: ev.id, value: toLocalInputValue(ev.ts) })}
+                              disabled={saving}
+                              style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 800 }}
+                            >
+                              編集
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {numDef && (
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, opacity: 0.9 }}>{numDef.label}</div>
+                          {numberEditingActive ? (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              <input
+                                type="number"
+                                value={numberEditing?.value ?? ''}
+                                min={numDef.min}
+                                step={numDef.step}
+                                onChange={e => setNumberEditing({ id: ev.id, field: numDef.field, value: e.target.value })}
+                                disabled={saving}
+                                style={{ height: 40, borderRadius: 10, border: '1px solid #374151', background: '#111827', color: '#fff', padding: '0 10px' }}
+                              />
+                              <button
+                                onClick={handleSaveNumber}
+                                disabled={saving}
+                                style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 800 }}
+                              >
+                                保存
+                              </button>
+                              <button
+                                onClick={() => setNumberEditing(null)}
+                                disabled={saving}
+                                style={{ padding: '8px 12px', borderRadius: 10 }}
+                              >
+                                取消
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                              <div>{numDef.value ?? '-'}</div>
+                              <button
+                                onClick={() =>
+                                  setNumberEditing({
+                                    id: ev.id,
+                                    field: numDef.field,
+                                    value: numDef.value != null ? String(numDef.value) : '',
+                                  })
+                                }
+                                disabled={saving}
+                                style={{ padding: '8px 12px', borderRadius: 10, fontWeight: 800 }}
+                              >
+                                編集
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
