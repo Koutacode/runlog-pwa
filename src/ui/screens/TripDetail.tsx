@@ -517,7 +517,7 @@ export default function TripDetail() {
                       <div style={{ fontWeight: 900, fontSize: 17 }}>{day.dayIndex}日目 {day.status === 'pending' ? '（締め待ち）' : ''}</div>
                       <div style={{ opacity: 0.85, fontSize: 14 }}>{day.fromLabel} → {day.toLabel}</div>
                       {day.closeOdo != null && (
-                        <div style={{ opacity: 0.85, fontSize: 14 }}>ODO: {day.closeOdo} km</div>
+                        <div style={{ opacity: 0.85, fontSize: 14 }}>休息開始: {day.closeOdo} km</div>
                       )}
                     </div>
                     <div style={{ fontSize: 21, fontWeight: 900 }}>{day.km} km</div>
