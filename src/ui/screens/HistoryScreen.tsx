@@ -125,7 +125,7 @@ export default function HistoryScreen() {
     }
   }
   return (
-    <div style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
+    <div className="page-shell">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 20, fontWeight: 900 }}>履歴</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>

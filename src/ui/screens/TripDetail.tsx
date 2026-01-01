@@ -539,7 +539,7 @@ export default function TripDetail() {
   const tripStartTs = tripStartEvent?.ts ?? events[0]?.ts;
   const groupedByDay = tripStartTs ? groupItemsByDay(grouped, tripStartTs) : [];
   return (
-    <div style={{ padding: 18, maxWidth: 960, margin: '0 auto', fontSize: 17, lineHeight: 1.6 }}>
+    <div className="page-shell" style={{ fontSize: 17, lineHeight: 1.6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 900 }}>運行詳細</div>

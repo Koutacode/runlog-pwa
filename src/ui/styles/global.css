@@ -70,7 +70,7 @@ a:hover {
   --tiger-glow: rgba(245, 158, 11, 0.45);
   position: relative;
   min-height: 100vh;
-  padding: 20px 16px 32px;
+  padding: calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
   background:
     radial-gradient(circle at 8% 5%, rgba(245, 158, 11, 0.32), transparent 55%),
     radial-gradient(circle at 85% 5%, rgba(251, 146, 60, 0.25), transparent 50%),
@@ -82,7 +82,7 @@ a:hover {
   content: '';
   position: absolute;
   inset: -12%;
-  background: url('/tiger-hero.svg') no-repeat center/cover;
+  background: url('/tiger-hero.svg') no-repeat 50% 45%/cover;
   opacity: 0.78;
   filter: drop-shadow(0 50px 90px rgba(0, 0, 0, 0.65)) saturate(1.12);
   pointer-events: none;
@@ -168,6 +168,7 @@ a:hover {
   box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
   animation: tiger-rise 0.6s ease-out both;
+  width: 100%;
 }
 
 .start-hero__title {
@@ -231,6 +232,61 @@ a:hover {
 
   .start-hero__brand {
     letter-spacing: 0.04em;
+  }
+}
+
+@media (min-width: 720px) {
+  .start-hero__frame {
+    max-width: 1100px;
+    gap: 20px;
+  }
+
+  .start-hero__panel {
+    max-width: 560px;
+  }
+}
+
+.page-shell {
+  margin: 0 auto;
+  padding: 16px;
+  width: min(96vw, 960px);
+}
+
+.home-shell {
+  margin: 0 auto;
+  padding: 16px;
+  width: min(96vw, 900px);
+}
+
+.home-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.home-primary {
+  display: grid;
+  gap: 12px;
+}
+
+.home-actions {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 720px) {
+  .page-shell {
+    padding: 20px 24px;
+    width: min(94vw, 1120px);
+  }
+
+  .home-shell {
+    padding: 20px 24px;
+    width: min(94vw, 1040px);
+  }
+
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+    align-items: start;
   }
 }
 

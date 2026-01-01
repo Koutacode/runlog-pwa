@@ -686,14 +686,14 @@ export default function HomeScreen() {
     ? (events.find(e => e.type === 'break_start' && (e as any).extras?.breakSessionId === openBreakSessionId) as any)
     : null;
   return (
-    <div style={{ padding: 16, maxWidth: 720, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 900 }}>運行中</div>
-              <div style={{ opacity: 0.85, fontSize: 13 }}>
-                開始: {tripStart?.ts ? new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(tripStart.ts)) : '-'} / 開始ODO: {tripStartOdo ?? '-'} km
-              </div>
-            </div>
+    <div className="home-shell">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>運行中</div>
+          <div style={{ opacity: 0.85, fontSize: 13 }}>
+            開始: {tripStart?.ts ? new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(tripStart.ts)) : '-'} / 開始ODO: {tripStartOdo ?? '-'} km
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <Link to={`/trip/${tripId}`} className="pill-link">
             詳細
@@ -749,250 +749,254 @@ export default function HomeScreen() {
         </div>
       </div>
       {wakeLockError && <div style={{ color: '#fca5a5', marginBottom: 8 }}>{wakeLockError}</div>}
-      <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 14, marginBottom: 12 }}>
-        <div style={{ fontWeight: 900, marginBottom: 6 }}>進行中のイベント</div>
-        <div style={{ display: 'grid', gap: 4 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
-            <span>運行</span>
-            <span>{tripElapsed != null ? fmtDuration(tripElapsed) : '-'}</span>
+      <div className="home-grid">
+        <div className="home-primary">
+          <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 14 }}>
+            <div style={{ fontWeight: 900, marginBottom: 6 }}>進行中のイベント</div>
+            <div style={{ display: 'grid', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                <span>運行</span>
+                <span>{tripElapsed != null ? fmtDuration(tripElapsed) : '-'}</span>
+              </div>
+              {restStart && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                  <span>休息</span>
+                  <span>{fmtDuration(now - new Date(restStart.ts).getTime())}</span>
+                </div>
+              )}
+              {loadStart && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                  <span>積込</span>
+                  <span>{fmtDuration(now - new Date(loadStart.ts).getTime())}</span>
+                </div>
+              )}
+              {unloadStart && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                  <span>荷卸</span>
+                  <span>{fmtDuration(now - new Date(unloadStart.ts).getTime())}</span>
+                </div>
+              )}
+              {breakStart && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
+                  <span>休憩</span>
+                  <span>{fmtDuration(now - new Date(breakStart.ts).getTime())}</span>
+                </div>
+              )}
+              {!restStart && !loadStart && !unloadStart && !breakStart && (
+                <div style={{ opacity: 0.8 }}>他の進行中イベントはありません</div>
+              )}
+            </div>
           </div>
-          {restStart && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
-              <span>休息</span>
-              <span>{fmtDuration(now - new Date(restStart.ts).getTime())}</span>
-            </div>
-          )}
-          {loadStart && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
-              <span>積込</span>
-              <span>{fmtDuration(now - new Date(loadStart.ts).getTime())}</span>
-            </div>
-          )}
-          {unloadStart && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
-              <span>荷卸</span>
-              <span>{fmtDuration(now - new Date(unloadStart.ts).getTime())}</span>
-            </div>
-          )}
-          {breakStart && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
-              <span>休憩</span>
-              <span>{fmtDuration(now - new Date(breakStart.ts).getTime())}</span>
-            </div>
-          )}
-          {!restStart && !loadStart && !unloadStart && !breakStart && (
-            <div style={{ opacity: 0.8 }}>他の進行中イベントはありません</div>
-          )}
+          <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 14 }}>
+            <div style={{ fontWeight: 900, marginBottom: 6 }}>位置情報</div>
+            {geoStatus ? (
+              <div style={{ display: 'grid', gap: 4, fontSize: 14 }}>
+                <div>緯度: {geoStatus.lat.toFixed(5)}</div>
+                <div>経度: {geoStatus.lng.toFixed(5)}</div>
+                {geoStatus.accuracy != null && <div>精度: ±{Math.round(geoStatus.accuracy)}m</div>}
+                {geoStatus.address && <div>地点: {geoStatus.address}</div>}
+                <div style={{ opacity: 0.8 }}>取得時刻: {new Date(geoStatus.at).toLocaleString('ja-JP')}</div>
+              </div>
+            ) : (
+              <div style={{ opacity: 0.8, marginBottom: 4 }}>まだ取得できていません</div>
+            )}
+            {geoError && <div style={{ color: '#fca5a5', marginTop: 6 }}>{geoError}</div>}
+            <button
+              onClick={captureGeoOnce}
+              style={{
+                marginTop: 8,
+                width: '100%',
+                height: 40,
+                borderRadius: 10,
+                border: '1px solid #374151',
+                background: '#1f2937',
+                color: '#fff',
+                fontWeight: 800,
+              }}
+            >
+              位置情報を再取得
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="card" style={{ color: '#fff', padding: 12, borderRadius: 14, marginBottom: 12 }}>
-        <div style={{ fontWeight: 900, marginBottom: 6 }}>位置情報</div>
-        {geoStatus ? (
-          <div style={{ display: 'grid', gap: 4, fontSize: 14 }}>
-            <div>緯度: {geoStatus.lat.toFixed(5)}</div>
-            <div>経度: {geoStatus.lng.toFixed(5)}</div>
-            {geoStatus.accuracy != null && <div>精度: ±{Math.round(geoStatus.accuracy)}m</div>}
-            {geoStatus.address && <div>地点: {geoStatus.address}</div>}
-            <div style={{ opacity: 0.8 }}>取得時刻: {new Date(geoStatus.at).toLocaleString('ja-JP')}</div>
-          </div>
-        ) : (
-          <div style={{ opacity: 0.8, marginBottom: 4 }}>まだ取得できていません</div>
-        )}
-        {geoError && <div style={{ color: '#fca5a5', marginTop: 6 }}>{geoError}</div>}
-        <button
-          onClick={captureGeoOnce}
-          style={{
-            marginTop: 8,
-            width: '100%',
-            height: 40,
-            borderRadius: 10,
-            border: '1px solid #374151',
-            background: '#1f2937',
-            color: '#fff',
-            fontWeight: 800,
-          }}
-        >
-          位置情報を再取得
-        </button>
-      </div>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {/* End trip */}
-        <BigButton label="運行終了" variant="danger" onClick={() => setOdoDialog({ kind: 'trip_end' })} />
-        {/* Load (積込) */}
-        {loadActive ? (
-          <BigButton
-            label="積込終了"
-            variant="neutral"
-            onClick={async () => {
-              try {
+        <div className="home-actions">
+          {/* End trip */}
+          <BigButton label="運行終了" variant="danger" onClick={() => setOdoDialog({ kind: 'trip_end' })} />
+          {/* Load (積込) */}
+          {loadActive ? (
+            <BigButton
+              label="積込終了"
+              variant="neutral"
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  await endLoad({ tripId, geo });
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '積込終了に失敗しました');
+                }
+              }}
+            />
+          ) : (
+            <BigButton
+              label="積込開始"
+              disabled={!canStartLoad}
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  await startLoad({ tripId, geo });
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '積込開始に失敗しました');
+                }
+              }}
+            />
+          )}
+          {/* Unload (荷卸) */}
+          {unloadActive ? (
+            <BigButton
+              label="荷卸終了"
+              variant="neutral"
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  await endUnload({ tripId, geo });
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '荷卸終了に失敗しました');
+                }
+              }}
+            />
+          ) : (
+            <BigButton
+              label="荷卸開始"
+              disabled={!canStartUnload}
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  await startUnload({ tripId, geo });
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '荷卸開始に失敗しました');
+                }
+              }}
+            />
+          )}
+          {/* Break (休憩) */}
+          {breakActive ? (
+            <BigButton
+              label="休憩終了"
+              variant="neutral"
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  await endBreak({ tripId, geo });
+                  cancelBreakReminder();
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '休憩終了に失敗しました');
+                }
+              }}
+            />
+          ) : (
+            <BigButton
+              label="休憩開始"
+              disabled={!canStartBreak}
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  await startBreak({ tripId, geo });
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '休憩開始に失敗しました');
+                }
+              }}
+            />
+          )}
+          {/* Rest (休息) */}
+          {restActive ? (
+            <BigButton label="休息終了" variant="neutral" onClick={() => setConfirmDayCloseOpen(true)} />
+          ) : (
+            <BigButton
+              label="休息開始（オド入力）"
+              disabled={!canStartRest}
+              onClick={() => {
                 ensureFullscreen();
-                const geo = await getGeo();
-                await endLoad({ tripId, geo });
-                await refresh();
-              } catch (e: any) {
-                alert(e?.message ?? '積込終了に失敗しました');
-              }
-            }}
-          />
-        ) : (
+                setOdoDialog({ kind: 'rest_start' });
+              }}
+            />
+          )}
+          {/* Fuel (給油) */}
           <BigButton
-            label="積込開始"
-            disabled={!canStartLoad}
-            onClick={async () => {
-              try {
-                ensureFullscreen();
-                const geo = await getGeo();
-                await startLoad({ tripId, geo });
-                await refresh();
-              } catch (e: any) {
-                alert(e?.message ?? '積込開始に失敗しました');
-              }
-            }}
-          />
-        )}
-        {/* Unload (荷卸) */}
-        {unloadActive ? (
-          <BigButton
-            label="荷卸終了"
-            variant="neutral"
-            onClick={async () => {
-              try {
-                ensureFullscreen();
-                const geo = await getGeo();
-                await endUnload({ tripId, geo });
-                await refresh();
-              } catch (e: any) {
-                alert(e?.message ?? '荷卸終了に失敗しました');
-              }
-            }}
-          />
-        ) : (
-          <BigButton
-            label="荷卸開始"
-            disabled={!canStartUnload}
-            onClick={async () => {
-              try {
-                ensureFullscreen();
-                const geo = await getGeo();
-                await startUnload({ tripId, geo });
-                await refresh();
-              } catch (e: any) {
-                alert(e?.message ?? '荷卸開始に失敗しました');
-              }
-            }}
-          />
-        )}
-        {/* Break (休憩) */}
-        {breakActive ? (
-          <BigButton
-            label="休憩終了"
-            variant="neutral"
-            onClick={async () => {
-              try {
-                ensureFullscreen();
-                const geo = await getGeo();
-                await endBreak({ tripId, geo });
-                cancelBreakReminder();
-                await refresh();
-              } catch (e: any) {
-                alert(e?.message ?? '休憩終了に失敗しました');
-              }
-            }}
-          />
-        ) : (
-          <BigButton
-            label="休憩開始"
-            disabled={!canStartBreak}
-            onClick={async () => {
-              try {
-                ensureFullscreen();
-                const geo = await getGeo();
-                await startBreak({ tripId, geo });
-                await refresh();
-              } catch (e: any) {
-                alert(e?.message ?? '休憩開始に失敗しました');
-              }
-            }}
-          />
-        )}
-        {/* Rest (休息) */}
-        {restActive ? (
-          <BigButton label="休息終了" variant="neutral" onClick={() => setConfirmDayCloseOpen(true)} />
-        ) : (
-          <BigButton
-            label="休息開始（オド入力）"
-            disabled={!canStartRest}
+            label="給油（数量入力）"
             onClick={() => {
               ensureFullscreen();
-              setOdoDialog({ kind: 'rest_start' });
+              setFuelOpen(true);
             }}
           />
-        )}
-        {/* Fuel (給油) */}
-        <BigButton
-          label="給油（数量入力）"
-          onClick={() => {
-            ensureFullscreen();
-            setFuelOpen(true);
-          }}
-        />
-        {/* Expressway (高速道路) */}
-        {expresswayActive ? (
-          <BigButton
-            label="高速道路終了"
-            variant="neutral"
-            onClick={async () => {
-              try {
-                ensureFullscreen();
-                const geo = await getGeo();
-                await endExpressway({ tripId, geo });
-                await refresh();
-              } catch (e: any) {
-                alert(e?.message ?? '高速道路の記録に失敗しました');
-              }
-            }}
-          />
-        ) : (
-          <BigButton
-            label="高速道路開始"
-            onClick={async () => {
-              try {
-                ensureFullscreen();
-                const geo = await getGeo();
-                const { eventId } = await startExpressway({ tripId, geo });
-                // 即時にIC名を取得して表示を早める（オンライン時のみ）
-                if (navigator.onLine && geo) {
-                  const result = await resolveNearestIC(geo.lat, geo.lng);
-                  if (result) {
-                    await updateExpresswayResolved({
-                      eventId,
-                      status: 'resolved',
-                      icName: result.icName,
-                      icDistanceM: result.distanceM,
-                    });
-                  }
+          {/* Expressway (高速道路) */}
+          {expresswayActive ? (
+            <BigButton
+              label="高速道路終了"
+              variant="neutral"
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  await endExpressway({ tripId, geo });
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '高速道路の記録に失敗しました');
                 }
+              }}
+            />
+          ) : (
+            <BigButton
+              label="高速道路開始"
+              onClick={async () => {
+                try {
+                  ensureFullscreen();
+                  const geo = await getGeo();
+                  const { eventId } = await startExpressway({ tripId, geo });
+                  // 即時にIC名を取得して表示を早める（オンライン時のみ）
+                  if (navigator.onLine && geo) {
+                    const result = await resolveNearestIC(geo.lat, geo.lng);
+                    if (result) {
+                      await updateExpresswayResolved({
+                        eventId,
+                        status: 'resolved',
+                        icName: result.icName,
+                        icDistanceM: result.distanceM,
+                      });
+                    }
+                  }
+                  await refresh();
+                } catch (e: any) {
+                  alert(e?.message ?? '高速道路の記録に失敗しました');
+                }
+              }}
+            />
+          )}
+          {/* Boarding (乗船) */}
+          <BigButton
+            label="乗船"
+            onClick={async () => {
+              try {
+                ensureFullscreen();
+                const geo = await getGeo();
+                await addBoarding({ tripId, geo });
                 await refresh();
               } catch (e: any) {
-                alert(e?.message ?? '高速道路の記録に失敗しました');
+                alert(e?.message ?? '乗船の記録に失敗しました');
               }
             }}
           />
-        )}
-        {/* Boarding (乗船) */}
-        <BigButton
-          label="乗船"
-          onClick={async () => {
-            try {
-              ensureFullscreen();
-              const geo = await getGeo();
-              await addBoarding({ tripId, geo });
-              await refresh();
-            } catch (e: any) {
-              alert(e?.message ?? '乗船の記録に失敗しました');
-            }
-          }}
-        />
+        </div>
       </div>
       {/* Fuel dialog */}
       <FuelDialog
