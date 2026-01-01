@@ -686,7 +686,8 @@ export default function HomeScreen() {
     ? (events.find(e => e.type === 'break_start' && (e as any).extras?.breakSessionId === openBreakSessionId) as any)
     : null;
   return (
-    <div className="home-shell">
+    <div className="home-backdrop">
+      <div className="home-shell">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 900 }}>運行中</div>
@@ -1113,6 +1114,7 @@ export default function HomeScreen() {
       />
       {autoExpresswaySettingsDialog}
       {autoExpresswayToastView}
+      </div>
     </div>
   );
 }

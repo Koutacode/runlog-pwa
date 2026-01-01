@@ -68,6 +68,8 @@ a:hover {
   --tiger-ink: rgba(7, 12, 18, 0.72);
   --tiger-edge: rgba(255, 255, 255, 0.14);
   --tiger-glow: rgba(245, 158, 11, 0.45);
+  --tiger-size: min(88vw, 78vh, 520px);
+  --tiger-shift-y: -4%;
   position: relative;
   min-height: 100vh;
   padding: calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
@@ -81,11 +83,16 @@ a:hover {
 .start-hero::before {
   content: '';
   position: absolute;
-  inset: -12%;
-  background: url('/tiger-hero.svg') no-repeat 50% 45%/cover;
+  left: 50%;
+  top: 50%;
+  width: var(--tiger-size);
+  height: var(--tiger-size);
+  transform: translate(-50%, calc(-50% + var(--tiger-shift-y)));
+  background: url('/tiger-hero.svg') no-repeat center/contain;
   opacity: 0.78;
   filter: drop-shadow(0 50px 90px rgba(0, 0, 0, 0.65)) saturate(1.12);
   pointer-events: none;
+  z-index: 0;
 }
 
 .start-hero::after {
@@ -100,6 +107,7 @@ a:hover {
   opacity: 0.35;
   mix-blend-mode: screen;
   pointer-events: none;
+  z-index: 0;
 }
 
 .start-hero__frame {
@@ -222,12 +230,12 @@ a:hover {
 @media (max-width: 540px) {
   .start-hero {
     padding: 16px 12px 28px;
+    --tiger-size: min(92vw, 80vh, 520px);
+    --tiger-shift-y: -2%;
   }
 
   .start-hero::before {
-    inset: -20% -10%;
     opacity: 0.82;
-    transform: translateX(0);
   }
 
   .start-hero__brand {
@@ -244,6 +252,11 @@ a:hover {
   .start-hero__panel {
     max-width: 560px;
   }
+
+  .start-hero {
+    --tiger-size: min(70vw, 70vh, 760px);
+    --tiger-shift-y: -6%;
+  }
 }
 
 .page-shell {
@@ -252,10 +265,38 @@ a:hover {
   width: min(96vw, 960px);
 }
 
+.home-backdrop {
+  position: relative;
+  min-height: 100vh;
+  padding: calc(8px + env(safe-area-inset-top)) 0 calc(16px + env(safe-area-inset-bottom));
+  background: var(--bg);
+  background-image: var(--bg-accent);
+  overflow: hidden;
+  --home-tiger-size: min(88vw, 70vh, 520px);
+  --home-tiger-shift-y: -4%;
+}
+
+.home-backdrop::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--home-tiger-size);
+  height: var(--home-tiger-size);
+  transform: translate(-50%, calc(-50% + var(--home-tiger-shift-y)));
+  background: url('/tiger-hero.svg') no-repeat center/contain;
+  opacity: 0.28;
+  filter: drop-shadow(0 40px 70px rgba(0, 0, 0, 0.55)) saturate(1.08);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .home-shell {
   margin: 0 auto;
   padding: 16px;
   width: min(96vw, 900px);
+  position: relative;
+  z-index: 1;
 }
 
 .home-grid {
@@ -287,6 +328,11 @@ a:hover {
   .home-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
     align-items: start;
+  }
+
+  .home-backdrop {
+    --home-tiger-size: min(64vw, 70vh, 760px);
+    --home-tiger-shift-y: -6%;
   }
 }
 
